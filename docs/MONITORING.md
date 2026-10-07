@@ -20,6 +20,8 @@ Admins are mailed (Settings → *Mail*) when:
 - a first sign-in lands as a pending access request
 - the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
 
+Each alert is one mail when trouble starts and one when it ends. Vaier remembers what it has told you, so restarting or updating it never re-sends an alert you already had. When it cannot read something — a machine, CrowdSec, its own notes — it waits for the next round rather than guessing.
+
 Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) sends no up/down or backup mail, and its nightly backup is skipped.
 
 ### Sending through Gmail
@@ -42,7 +44,7 @@ Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER
 
 ## Host disk monitoring
 
-Every five minutes Vaier runs `df` over SSH on every machine it holds a **host credential** for, the Vaier host included (store a credential for it like any other machine). Every real filesystem is watched, not just `/`. An unreachable host is skipped, never mistaken for a full disk.
+Every five minutes Vaier runs `df` over SSH on every machine it holds a **host credential** for, the Vaier host included (store a credential for it like any other machine). Every real filesystem is watched, not just `/`. An unreachable host is skipped, never mistaken for a full disk; one mount `df` cannot read, such as a stale network share, is skipped on its own and the rest are still watched.
 
 - **The first sighting counts.** A filesystem already over its threshold is alerted on at once.
 - **One mail per band.** Bands are 80, 85, 90, 95, 100. 86% → 89% is silence; 89% → 91% is a mail.
@@ -55,7 +57,7 @@ Each machine's card in the **Explorer** shows its worst watched filesystem: gree
 
 ### Disk-fill forecast (early warning)
 
-Vaier tracks each filesystem's fill rate and mails once when it is projected to reach **its own alert threshold** within **seven days** — *"projected to reach its 80% threshold in ~5 days"*. It needs three days of history first. Once the disk crosses its threshold the level alert takes over; the two never speak at once. An all-clear follows only if it drains or slows well clear of the horizon. Muted filesystems are never forecast.
+Vaier tracks each filesystem's fill rate and mails once when it is projected to reach **its own alert threshold** within **seven days** — *"projected to reach its 80% threshold in ~5 days"*. It needs three days of history first. Once the disk crosses its threshold the level alert takes over; the two never speak at once, and dipping back under the line doesn't warn again. An all-clear follows only if it drains or slows well clear of the horizon. Muted filesystems are never forecast.
 
 ---
 
@@ -93,6 +95,7 @@ Once a day Vaier compares each container's image digest with what its registry s
 
 - **Vaier's own stack is not watched** — it updates with Vaier; see [Updating Vaier itself](#updating-vaier-itself).
 - **One rollup mail** when images newly go out of date, naming image and machine (`vaultwarden/server:latest on Apalveien 5`).
+- An image on a machine that was offline at sweep time, or in a stopped container, keeps what Vaier knew — it isn't mailed again when it's back.
 - A **moving tag** (rebuilt daily, like `netdata/netdata:latest`) keeps its mark, labelled `moving`, but is never mailed.
 - A registry Vaier can't read, a locally built image or a digest-pinned one reads **unknown** and shows no mark — so no mark is not a promise the image is current.
 
@@ -118,7 +121,7 @@ It never touches your `.env` values or runtime folders (`vaier/config`, `wiregua
 
 The **reverse proxy audit** reads back the Traefik config Vaier writes (`remote-apps.yml`) and reports entries that lead nowhere: unused or missing middlewares, redirect loops, routers with no service, and services nothing routes to.
 
-**Vaier says so and does not touch the file.** It runs at startup and every five minutes. Findings show as one row in **Needs you** ("2 entries in the reverse proxy config lead nowhere"); **See which** lists them. You are mailed when findings appear, change, or clear.
+**Vaier says so and does not touch the file.** It runs at startup and every five minutes. Findings show as one row in **Needs you** ("2 entries in the reverse proxy config lead nowhere"); **See which** lists them. You are mailed when a new finding appears and once when all are fixed; fixing some of them sends nothing. If Vaier can't read the file, it says nothing that round.
 
 ## Pre-flight
 
@@ -135,4 +138,4 @@ Vaier shows what [CrowdSec](NETWORKING.md#edge-hardening) is blocking live in th
 - **A credential attack** — brute force or password spraying aimed at *your* fleet. One rollup per sweep.
 - **One of your own networks being blocked** — a ban inside your **trusted networks** means your own access is next. It gets its own lockout warning, in time to lift the block.
 
-There is **no all-clear** when a block expires.
+There is **no all-clear** when a block expires. If CrowdSec can't be read for a round, the view keeps its last list and nothing is mailed.
