@@ -1,0 +1,1292 @@
+# The wireguard container's bridge address, pinned so the host-netns route-sync container can name it
+# without Docker DNS. Sits high in the subnet, clear of the addresses Docker hands out sequentially from
+# .2, so it can never collide with a dynamically-assigned container. Everything else — Vaier's
+# LanRouteAdapter, Traefik's route loop — still resolves the container by DNS name and is unaffected.
+x-wireguard-bridge-ip: &wireguard-bridge-ip "172.20.0.250"
+
+networks:
+  vaier-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+configs:
+  # Inline haproxy template for the docker-socket-proxy container. Embedded so
+  # the stack works from a single docker-compose.yml download. The tecnativa
+  # entrypoint runs envsubst over this template, so $${LOG_LEVEL}, $$SOCKET_PATH
+  # and $${BIND_CONFIG} are escaped here ($$ = literal $ after Compose interpolation)
+  # and resolved at container start. Regex anchors (start$$, push$$) are likewise
+  # escaped. Everything inside { env(NAME) -m bool } is haproxy syntax, not shell.
+  haproxy_template:
+    content: |
+      global
+          log stdout format raw daemon "$${LOG_LEVEL}"
+
+          pidfile /run/haproxy.pid
+          maxconn 4000
+
+          # Turn on stats unix socket
+          server-state-file /var/lib/haproxy/server-state
+
+      defaults
+          mode http
+          log global
+          option httplog
+          option dontlognull
+          option http-server-close
+          option redispatch
+          retries 3
+          timeout http-request 10s
+          timeout queue 1m
+          timeout connect 10s
+          timeout client 10m
+          timeout server 10m
+          timeout http-keep-alive 10s
+          timeout check 10s
+          maxconn 3000
+
+          # Allow seamless reloads
+          load-server-state-from-file global
+
+          # Use provided example error pages
+          errorfile 400 /usr/local/etc/haproxy/errors/400.http
+          errorfile 403 /usr/local/etc/haproxy/errors/403.http
+          errorfile 408 /usr/local/etc/haproxy/errors/408.http
+          errorfile 500 /usr/local/etc/haproxy/errors/500.http
+          errorfile 502 /usr/local/etc/haproxy/errors/502.http
+          errorfile 503 /usr/local/etc/haproxy/errors/503.http
+          errorfile 504 /usr/local/etc/haproxy/errors/504.http
+
+      backend dockerbackend
+          server dockersocket $$SOCKET_PATH
+
+      backend docker-events
+          server dockersocket $$SOCKET_PATH
+          timeout server 0
+
+      frontend dockerfrontend
+          bind $${BIND_CONFIG}
+          http-request deny unless METH_GET || { env(POST) -m bool }
+
+          # Vaier-specific explicit denies (placed BEFORE the broad CONTAINERS allow).
+          # These close the privesc chain that the upstream CONTAINERS=1 + POST=1
+          # combination otherwise leaves open: an attacker with RCE in vaier could
+          # otherwise POST /containers/create + POST /containers/{id}/start to launch
+          # a --privileged container and escape to host root. Also block image pulls
+          # and other write paths that POST=1 alone would otherwise permit.
+          #
+          # #264: the one start that passes is dex-init's and oauth2-proxy-init's, by exact name, so
+          # Settings can apply a new sign-in provider. Starting an existing one-shot whose command Vaier
+          # cannot change (create stays denied) only re-runs that fixed renderer; every other start —
+          # any other container, any lookalike name — is still denied.
+          http-request deny if METH_POST { path -m end /containers/create }
+          http-request deny if METH_POST { path -m reg -i /containers/[a-zA-Z0-9_.-]+/start$$ } !{ path -m reg -i ^(/v[0-9.]+)?/containers/(dex-init|oauth2-proxy-init)/start$$ }
+          http-request deny if METH_POST { path -m end /images/create }
+          http-request deny if METH_POST { path -m end /images/load }
+          http-request deny if METH_POST { path -m reg -i /images/[^/]+/push$$ }
+
+          # Allowed endpoints (env-driven, unchanged from tecnativa default)
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/containers/[a-zA-Z0-9_.-]+/((stop)|(restart)|(kill)) } { env(ALLOW_RESTARTS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/containers/[a-zA-Z0-9_.-]+/start } { env(ALLOW_START) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/containers/[a-zA-Z0-9_.-]+/stop } { env(ALLOW_STOP) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/auth } { env(AUTH) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/build } { env(BUILD) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/commit } { env(COMMIT) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/configs } { env(CONFIGS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/containers } { env(CONTAINERS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/distribution } { env(DISTRIBUTION) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/events } { env(EVENTS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/exec } { env(EXEC) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/grpc } { env(GRPC) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/images } { env(IMAGES) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/info } { env(INFO) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/networks } { env(NETWORKS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/nodes } { env(NODES) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/_ping } { env(PING) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/plugins } { env(PLUGINS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/secrets } { env(SECRETS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/services } { env(SERVICES) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/session } { env(SESSION) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/swarm } { env(SWARM) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/system } { env(SYSTEM) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/tasks } { env(TASKS) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/version } { env(VERSION) -m bool }
+          http-request allow if { path,url_dec -m reg -i ^(/v[\d\.]+)?/volumes } { env(VOLUMES) -m bool }
+          http-request deny
+          default_backend dockerbackend
+
+          use_backend docker-events if { path,url_dec -m reg -i ^(/v[\d\.]+)?/events }
+
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:1.0.20250521-r1-ls110
+    container_name: wireguard
+    # Memory caps on every service so one runaway container cannot exhaust this
+    # 1.9 GB host and livelock it (2026-07-10). Sized from measured RSS with
+    # generous headroom; caps are ceilings, not reservations.
+    mem_limit: 128m
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${VAIER_TZ:-UTC}
+      - SERVERURL=vaier.${VAIER_DOMAIN}
+      - SERVERPORT=51820
+      - PEERS=0
+      - PEERDNS=auto
+      - INTERNAL_SUBNET=10.13.13.0
+      - ALLOWEDIPS=0.0.0.0/0
+    volumes:
+      - ./wireguard/config:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    restart: unless-stopped
+    networks:
+      vaier-network:
+        ipv4_address: *wireguard-bridge-ip
+
+  wireguard-masquerade:
+    image: lscr.io/linuxserver/wireguard:1.0.20250521-r1-ls110
+    container_name: wireguard-masquerade
+    mem_limit: 64m
+    network_mode: "service:wireguard"
+    cap_add:
+      - NET_ADMIN
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        until ip link show wg0 2>/dev/null; do sleep 2; done
+        while ip link show wg0 2>/dev/null; do
+          # Docker network -> VPN: source-NAT bridge traffic as it leaves wg0.
+          iptables -t nat -C POSTROUTING -s 172.20.0.0/16 -o wg0 -j MASQUERADE 2>/dev/null || \
+            iptables -t nat -A POSTROUTING -s 172.20.0.0/16 -o wg0 -j MASQUERADE
+          # VPN -> anywhere off-tunnel: source-NAT anything leaving a non-wg0 interface
+          # so a LAN host behind a server peer can reach the server's VPC/LAN and get a
+          # return route. Matching `! -o wg0` is NIC-name agnostic, so it works whether the
+          # egress is the bridge (eth0) or the host NIC (ens5) -- unlike the wg0.conf
+          # PostUp's `-o eth+`, which is a no-op when the NIC isn't named eth*. #248.
+          iptables -t nat -C POSTROUTING ! -o wg0 -j MASQUERADE 2>/dev/null || \
+            iptables -t nat -A POSTROUTING ! -o wg0 -j MASQUERADE
+          # VPN -> the stack's own bridge: a peer reaches Pi-hole and Traefik (incl. the tunnel door) only.
+          # Vaier, docker-proxy and Traefik's API trust the bridge and carry no auth of their own.
+          if iptables -N VAIER-TUNNEL 2>/dev/null; then
+            iptables -A VAIER-TUNNEL -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+            iptables -A VAIER-TUNNEL -d 172.20.0.53 -p udp --dport 53 -j ACCEPT
+            iptables -A VAIER-TUNNEL -d 172.20.0.53 -p tcp --dport 53 -j ACCEPT
+            iptables -A VAIER-TUNNEL -d 172.20.0.251 -p tcp -m multiport --dports 80,443,8090 -j ACCEPT
+            iptables -A VAIER-TUNNEL -j DROP
+          fi
+          iptables -C FORWARD -i wg0 -d 172.20.0.0/16 -j VAIER-TUNNEL 2>/dev/null || \
+            iptables -I FORWARD 1 -i wg0 -d 172.20.0.0/16 -j VAIER-TUNNEL
+          sleep 10
+        done
+        exit 1
+    depends_on:
+      - wireguard
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.6.14
+    container_name: traefik
+    mem_limit: 192m
+    cap_add:
+      - NET_ADMIN
+    environment:
+      # Used only by the entrypoint's DNS-propagation wait below to build the infra hostnames it holds on.
+      VAIER_DOMAIN: ${VAIER_DOMAIN:-}
+      # Read by the CrowdSec bouncer plugin through the file provider's templating (security.yml below),
+      # so the key never lands on disk. The same install.sh-generated secret crowdsec self-registers.
+      CROWDSEC_BOUNCER_API_KEY: ${VAIER_CROWDSEC_BOUNCER_KEY:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # --- #258 edge hardening. `traefik/` is gitignored in its entirety, so the edge's security
+        # policy cannot be a committed file — it is rendered here, on every boot, before Traefik is
+        # started at the bottom of this script. That ordering is not cosmetic: the middlewares below are
+        # referenced from Traefik's own static config (--entrypoints.websecure.http.middlewares) and from
+        # Vaier's compose labels, and a reference Traefik cannot resolve DISABLES the router that carries
+        # it. Rendering here — rather than from Vaier, which boots after Traefik — closes that window.
+        # This is a SECOND file in the watched directory. Vaier owns exactly one of its own, which it
+        # rewrites by atomic move on every publish; writing into that one would be clobbered.
+        mkdir -p /traefik/config
+        cat > /traefik/config/.security.yml.tmp <<'VAIER_EDGE_POLICY'
+        # GENERATED ON EVERY BOOT by the traefik entrypoint in docker-compose.yml. Edits here are lost.
+        #
+        # There is deliberately NO Content-Security-Policy in this file. Vaier's file viewer
+        # (GET /machines/{id}/files/view) already serves every previewed file under its own tight,
+        # per-media-type CSP — see ViewableFile.SANDBOXED_POLICY / PDF_POLICY. A CSP set at the edge
+        # would either overwrite that one, silently weakening a real security boundary, or stack with
+        # it — and a browser enforces the INTERSECTION of every CSP header it receives, which breaks
+        # file viewing outright. The application owns CSP; the edge stays out of it.
+        #
+        # There is deliberately no Strict-Transport-Security either. HSTS cannot be taken back once a
+        # browser has seen it, so it is a decision of its own — deferred, tracked as issue #342.
+        http:
+          middlewares:
+            # #351: FIRST on every router EXCEPT the recovery doors — Vaier's own sign-in path (the
+            # console on vaier.<domain> bar the phone-join router, oauth2.<domain>, dex.<domain>) —
+            # so a banned operator can still sign in and lift the ban. Vaier's routers name it in
+            # their labels; every route Vaier writes to its file carries it first. The console stays
+            # behind oauth2-proxy and the admin gate: only the ban is not enforced there.
+            # Traefik's CrowdSec plugin in STREAM mode: the block list is pulled from the Security
+            # Engine once a minute and every request is answered from memory. The standalone
+            # bouncer this replaced asked the engine about each request, and under one page load's
+            # burst of sixty requests that SQLite-backed API serialised to a second per request —
+            # the whole domain felt slow, published services included.
+            # updateMaxFailure -1: an engine that cannot be reached keeps the LAST list in force
+            # instead of turning every route away — its detection is down then too, so nothing
+            # new could have been banned. Startup still waits for the first sync (the plugin's
+            # default), so no request is served before the list exists.
+            crowdsec-bouncer:
+              plugin:
+                bouncer:
+                  enabled: true
+                  crowdsecMode: stream
+                  crowdsecLapiScheme: http
+                  crowdsecLapiHost: crowdsec:8080
+                  crowdsecLapiKey: '{{ env "CROWDSEC_BOUNCER_API_KEY" }}'
+                  updateIntervalSeconds: 60
+                  updateMaxFailure: -1
+            # Applied to EVERY router via the websecure entrypoint, published third-party services
+            # included. Only headers that are safe on an application Vaier did not write: nosniff
+            # cannot break a correctly-typed response, and strict-origin-when-cross-origin is already
+            # the modern browser default, so replacing an app's own value never breaks a flow that
+            # depends on the referrer.
+            vaier-security-headers:
+              headers:
+                contentTypeNosniff: true
+                referrerPolicy: strict-origin-when-cross-origin
+            # Applied to VAIER'S OWN routers only, via compose labels. Frame protection is not safe as
+            # a fleet-wide default: a published app may legitimately embed or be embedded, and Vaier
+            # generates those routers, so a bad default would break them silently and at scale.
+            # SAMEORIGIN rather than DENY because the Explorer frames its own pages same-origin (the
+            # Users/Concepts bridge in explorer-shell.js) — DENY would blank those panes.
+            vaier-frame-guard:
+              headers:
+                customFrameOptionsValue: SAMEORIGIN
+        tls:
+          options:
+            # `default` is Traefik's implicit option set: every router that does not name one inherits
+            # it. That covers the compose-label routers AND every route TraefikReverseProxyAdapter
+            # generates, without touching a single router definition. The ACME HTTP-01 challenge is
+            # served over the plain `web` entrypoint, which terminates no TLS, so none of this is on
+            # the certificate-issuance path.
+            default:
+              minVersion: VersionTLS12
+              # TLS 1.2 suites only — Go does not allow the TLS 1.3 suites to be configured, and they
+              # are all AEAD already. ECDHE for forward secrecy, AEAD only: no CBC, no RC4, no 3DES,
+              # no static RSA key exchange. Both ECDSA and RSA leaf types are listed because Let's
+              # Encrypt can issue either.
+              cipherSuites:
+                - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+                - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        VAIER_EDGE_POLICY
+        mv /traefik/config/.security.yml.tmp /traefik/config/security.yml
+        # Routes to the VPN subnet and each relay's lanCidr, re-checked every 15s so a relay added later
+        # is reachable without a restart. Runs here, not in a sidecar: a sidecar sharing this netns dies
+        # whenever traefik is recreated and then leaves every new relay silently unrouted. $$$$ is this
+        # shell, which `exec` below turns into traefik, so the loop ends with it and holds no output open.
+        (
+          while kill -0 "$$$$" 2>/dev/null; do
+            WG_IP=$$(getent hosts wireguard | awk '{print $$1}')
+            if [ -n "$$WG_IP" ]; then
+              ip route replace 10.13.13.0/24 via "$$WG_IP" 2>/dev/null || true
+              for f in /wireguard-config/*/*.conf; do
+                [ -f "$$f" ] || continue
+                cidr=$$(grep -oE '"lanCidr" *: *"[^"]+"' "$$f" 2>/dev/null | head -1 | sed -E 's/.*"lanCidr" *: *"([^"]+)".*/\1/')
+                [ -n "$$cidr" ] && ip route replace "$$cidr" via "$$WG_IP" 2>/dev/null || true
+              done
+            fi
+            sleep 15
+          done
+        ) >/dev/null 2>&1 &
+        # Fresh-install ACME race guard. Vaier writes no DNS (#331) — the operator's one `*.<domain>` A
+        # record answers for all three infra names — but on a fresh install that record may have been made
+        # minutes ago, or not at all. If we launch traefik before it answers, the first Let's Encrypt
+        # request gets NXDOMAIN and the retry burst trips LE's "5 failed authorizations per host per hour"
+        # limit (an hour on the self-signed default cert). So hold here until all three names resolve on a
+        # PUBLIC resolver (what LE queries — not this container's split-horizon/VPC resolver) BEFORE any
+        # ACME. Fail-open after ~5 min so a genuinely broken wildcard never leaves the box without a
+        # reverse proxy forever; traefik's own ACME retry then takes over.
+        if [ -n "$$VAIER_DOMAIN" ]; then
+          deadline=$$(( $$(date +%s) + 300 ))
+          for h in vaier oauth2 dex; do
+            until nslookup "$$h.$$VAIER_DOMAIN" 1.1.1.1 >/dev/null 2>&1 || nslookup "$$h.$$VAIER_DOMAIN" 8.8.8.8 >/dev/null 2>&1; do
+              if [ "$$(date +%s)" -ge "$$deadline" ]; then
+                echo "traefik: DNS wait timed out for $$h.$$VAIER_DOMAIN — proceeding to ACME anyway (fail-open)"
+                break
+              fi
+              echo "traefik: waiting for $$h.$$VAIER_DOMAIN to resolve before asking Let's Encrypt..."
+              sleep 5
+            done
+          done
+        fi
+        exec traefik "$$0" "$$@"
+    command:
+      - --log.level=INFO
+      - --log.format=json
+      - --accesslog=true
+      - --accesslog.format=json
+      # #329: written to a file (rotated by the traefik-logrotate sidecar) rather than left on
+      # stdout, so CrowdSec's Security Engine has a real acquisition source to tail
+      # (crowdsec/acquis.d/traefik.yaml) — the gap that would otherwise silently break every
+      # "malicious HTTP probing results in a block decision" scenario.
+      - --accesslog.filepath=/traefik/logs/access.log
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.endpoint=tcp://docker-proxy:2375
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/traefik/config
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # The tunnel door: hello and goodbye from the Vaier app, reachable only through WireGuard (no host
+      # port). The public entrypoints are the default, so a router naming none never lands here.
+      - --entrypoints.tunnel.address=:8090
+      - --entrypoints.web.asDefault=true
+      - --entrypoints.websecure.asDefault=true
+      # Every Vaier router is websecure-only, so a schemeless hostname (which browsers request as
+      # http://) would hit no router and get Traefik's default 404. Globally redirect web->websecure.
+      # Traefik serves the ACME HTTP-01 challenge below at higher priority than this redirect, so
+      # Let's Encrypt issuance is unaffected.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # #258: the safe security headers ride the ENTRYPOINT, not individual routers. That is what makes
+      # "every router carries them" true by construction — the compose-label routers, every route
+      # TraefikReverseProxyAdapter generates into remote-apps.yml, and anything added by hand later — with
+      # no backfill and without touching the file Vaier owns. Deliberately NOT on the `web` entrypoint:
+      # that one serves the ACME HTTP-01 challenge and 308s everything else, so headers there buy nothing.
+      # Frame protection is NOT here — it is per-router, on Vaier's own surfaces only (see the labels on
+      # the vaier, oauth2-proxy, dex and vaier-offline services). The middleware itself is rendered by
+      # this service's entrypoint above, before traefik starts, so this reference always resolves.
+      #
+      # #351: crowdsec-bouncer is deliberately NOT here. An entrypoint middleware cannot be taken off
+      # one router, and on the entrypoint it banned an operator from the very console that lifts bans.
+      # It rides each router instead, first in its chain, everywhere but the recovery doors (see the
+      # crowdsec-bouncer middleware above).
+      - --entrypoints.websecure.http.middlewares=vaier-security-headers@file
+      # The bouncer is this plugin (the crowdsec-bouncer middleware rendered above), pinned like every
+      # other upstream. Fetched from the plugin registry once and kept in plugins-storage.
+      - --experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      - --experimental.plugins.bouncer.version=v1.7.1
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}
+      - --certificatesresolvers.letsencrypt.acme.storage=/traefik/acme/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    # Traefik's API/dashboard listens on :8080 (--api.insecure=true above), but the upstream image
+    # only EXPOSEs 80 and 443 — and Vaier discovers publishable services from a container's exposed
+    # ports, so the one container of its own stack worth publishing never showed up. `expose` is
+    # metadata: it publishes nothing to the host and changes no reachability (the port stays reachable
+    # only inside vaier-network, as it already was for TRAEFIK_API_URL), it just tells Vaier it exists.
+    expose:
+      - "8080"
+    volumes:
+      - ./traefik/config:/traefik/config
+      - ./traefik/acme:/traefik/acme
+      - ./wireguard/config:/wireguard-config:ro
+      - ./traefik/logs:/traefik/logs
+      # The downloaded bouncer plugin, kept so a restart never depends on the plugin registry.
+      - ./traefik/plugins-storage:/plugins-storage
+    restart: unless-stopped
+    depends_on:
+      - wireguard
+      - docker-proxy
+    networks:
+      vaier-network:
+        # Inside the stack, the infra hostnames must resolve to Traefik itself — not out to the public IP.
+        # A container that looks one of these up before the operator's wildcard answers gets NXDOMAIN and
+        # poisons its resolver's NEGATIVE cache (a zone's SOA negative TTL is commonly ~15 min). That is what
+        # stranded oauth2-proxy's OIDC discovery against dex.<domain> in a crash loop long after the record
+        # existed. These aliases make Docker's embedded DNS answer
+        # vaier/oauth2/dex.<domain> from its own registry (straight to Traefik over the bridge) before it ever
+        # forwards externally — no public DNS, no negative cache — and Traefik then terminates TLS with the
+        # real cert and routes on to the backend. The internal-resolution complement to the entrypoint's
+        # public-DNS ACME wait above.
+        aliases:
+          - vaier.${VAIER_DOMAIN}
+          - oauth2.${VAIER_DOMAIN}
+          - dex.${VAIER_DOMAIN}
+        # Pinned so the Vaier app can name the tunnel door; high in the subnet like WireGuard's .250.
+        ipv4_address: 172.20.0.251
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.2
+    container_name: docker-proxy
+    mem_limit: 64m
+    labels:
+      # The haproxy_template's digest (DockerComposeStructureTest names the value). Compose misses an edit
+      # inside an inline config, so without this an upgrade keeps the old proxy rules.
+      - vaier.rules-digest=faf92e82124a
+    environment:
+      # Allowlist flags for Vaier + Traefik. Combined with the haproxy_template
+      # config below (which adds explicit denies for /containers/create and
+      # /containers/{id}/start), this closes the privesc chain from "RCE in
+      # vaier" to "host root via docker run --privileged".
+      - CONTAINERS=1     # /containers and /containers/{id}/json — Vaier discovery + Traefik provider
+      - EVENTS=1         # /events — DockerEventListener + Traefik live updates
+      - EXEC=1           # /exec — WireGuardVpnAdapter into wireguard, CrowdSecCliAdapter into crowdsec
+      - IMAGES=1         # /images — DockerServerAdapter image inspect
+      - PING=1           # /_ping — health checks
+      - POST=1           # global gate for POST methods (required by EXEC and ALLOW_RESTARTS)
+      - ALLOW_RESTARTS=1 # /containers/{name}/restart — DockerContainerAdapter
+      # Not ALLOW_START: the template lets through only the two sign-in renderers' starts (#264), and
+      # CONTAINERS=1 already covers the /wait and /logs Vaier reads their exit code and output from.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Override the upstream template so the entrypoint substitutes env vars
+    # into our custom config (added explicit denies). CMD reads /tmp/haproxy.cfg.
+    configs:
+      - source: haproxy_template
+        target: /usr/local/etc/haproxy/haproxy.cfg.template
+        mode: 0444
+    restart: unless-stopped
+    networks:
+      - vaier-network
+
+  # --- #329 Slice 1: CrowdSec fleet-threat-detection. This is the Security Engine; enforcement is
+  # Traefik's own CrowdSec plugin — see the `traefik` service's --entrypoints.websecure.http.middlewares
+  # flag and the crowdsec-bouncer middleware in security.yml.
+  #
+  # BOUNCER_KEY_vaier: crowdsec's own docker_start.sh scans every BOUNCER_KEY_* env var at boot and
+  # self-registers a bouncer named after the suffix with that value as its API key (see
+  # /docker_start.sh's register_bouncer loop) — no cscli exec from Vaier needed. The same value is
+  # handed to Traefik's bouncer plugin as CROWDSEC_BOUNCER_API_KEY. VAIER_CROWDSEC_BOUNCER_KEY is
+  # install.sh-generated exactly like VAIER_DEX_CLIENT_SECRET — not operator-authored.
+  #
+  # COLLECTIONS=crowdsecurity/traefik installs the Traefik log parser + scenarios; the acquis.d
+  # mount below is the acquisition source that tells crowdsec which file to actually tail — the
+  # parser alone reads nothing without it.
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.7.8
+    container_name: crowdsec
+    mem_limit: 256m
+    environment:
+      COLLECTIONS: crowdsecurity/traefik
+      BOUNCER_KEY_vaier: ${VAIER_CROWDSEC_BOUNCER_KEY:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+    volumes:
+      - ./crowdsec/config:/etc/crowdsec
+      - ./crowdsec/data:/var/lib/crowdsec/data
+      - ./crowdsec/acquis.d:/etc/crowdsec/acquis.d:ro
+      # Single-file mount (not directory) — the image's parsers/s02-enrich already ships hub
+      # parsers (geoip-enrich, the private-IP whitelist, ...); mounting the whole directory would
+      # shadow all of them. Vaier's SecurityService writes this file; vaier-init pre-touches it.
+      - ./crowdsec/whitelist/vaier-trusted-networks.yaml:/etc/crowdsec/parsers/s02-enrich/vaier-trusted-networks.yaml:ro
+      # Escalating-ban policy: a single-file mount over the image's default profiles.yaml, same
+      # reasoning as the whitelist above — the full /etc/crowdsec dir mount still carries every hub
+      # parser and scenario; this replaces only the one file that decides ban DURATION. The image
+      # default bans a source for a flat 4h; this makes each successive ban on the same source
+      # longer (4h, 8h, 12h, ...). vaier-init renders it before crowdsec boots (crowdsec depends_on
+      # it); RO so the image's first-boot config copy never clobbers it. WHERE a ban is enforced is
+      # unchanged — Traefik's plugin still exempts the recovery doors (#351), so a longer ban can
+      # never lock the operator out of the console that lifts it.
+      - ./crowdsec/profiles/vaier-profiles.yaml:/etc/crowdsec/profiles.yaml:ro
+      - ./traefik/logs:/var/log/traefik:ro
+    depends_on:
+      vaier-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - vaier-network
+
+  # The fleet's DNS. Every phone/laptop peer config says `DNS = 172.20.0.53`, so this address must
+  # always answer. No host port: peers reach it through the tunnel. Its admin UI (port 80) is published
+  # like Traefik's dashboard, behind social login — so Pi-hole's own password is switched off.
+  pihole:
+    image: pihole/pihole:2026.09.0
+    container_name: pihole
+    mem_limit: 128m
+    environment:
+      TZ: ${VAIER_TZ:-UTC}
+      # Queries arrive from the tunnel, which is not Pi-hole's "local" network.
+      FTLCONF_dns_listeningMode: ALL
+      FTLCONF_webserver_api_password: ""
+    volumes:
+      - ./pihole/etc-pihole:/etc/pihole
+      - ./pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+    restart: unless-stopped
+    networks:
+      vaier-network:
+        ipv4_address: 172.20.0.53
+
+  # Rotates Traefik's access log (copytruncate — Traefik has no reopen signal to support any other
+  # rotation strategy) so it can't grow unbounded now that it's written to a file for CrowdSec.
+  traefik-logrotate:
+    image: alpine:3.20
+    container_name: traefik-logrotate
+    mem_limit: 32m
+    volumes:
+      - ./traefik/logs:/traefik/logs
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        apk add --no-cache logrotate >/dev/null
+        cat > /etc/logrotate-traefik.conf <<'EOF'
+        /traefik/logs/access.log {
+          daily
+          rotate 7
+          compress
+          missingok
+          notifempty
+          copytruncate
+        }
+        EOF
+        while true; do
+          logrotate -s /tmp/logrotate.state /etc/logrotate-traefik.conf
+          sleep 3600
+        done
+    restart: unless-stopped
+
+  # The Vaier host is the one machine in the fleet that IS the Docker host rather than something behind
+  # the tunnel, so it inherits no LAN routes: Traefik's route loop and Vaier's own LanRouteAdapter write
+  # into container netns, never the host's. That left the host unable to reach a relay's LAN — so a backup
+  # job for the Vaier server itself couldn't reach the borg server, and neither could any host-level tool.
+  #
+  # This shares the HOST's network namespace and installs the same relay lanCidr routes there, via the
+  # wireguard container. It can't use Docker DNS to find that container (the host has none), so it reads
+  # the address the sibling containers see. wireguard-masquerade already SNATs 172.20.0.0/16 out of wg0,
+  # and a host packet routed at the bridge is sourced from 172.20.0.1 — inside that range — so replies
+  # come back without any extra rule.
+  host-lan-routes:
+    image: lscr.io/linuxserver/wireguard:1.0.20250521-r1-ls110
+    container_name: host-lan-routes
+    mem_limit: 64m
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    environment:
+      # The host has no Docker DNS, so it can't resolve `wireguard` the way the sibling route-sync
+      # containers do. Hence the pinned bridge address below — never the Docker socket, which would hand
+      # a NET_ADMIN host-netns container full control of the daemon that docker-socket-proxy exists to fence off.
+      WG_IP: *wireguard-bridge-ip
+    volumes:
+      - ./wireguard/config:/wireguard-config:ro
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        while true; do
+          if [ -n "$$WG_IP" ]; then
+            for f in /wireguard-config/*/*.conf; do
+              [ -f "$$f" ] || continue
+              cidr=$$(grep -oE '"lanCidr" *: *"[^"]+"' "$$f" 2>/dev/null | head -1 | sed -E 's/.*"lanCidr" *: *"([^"]+)".*/\1/')
+              if [ -n "$$cidr" ]; then
+                ip route show "$$cidr" 2>/dev/null | grep -q "via $$WG_IP" || \
+                  ip route replace "$$cidr" via "$$WG_IP" 2>/dev/null || true
+              fi
+            done
+          fi
+          sleep 15
+        done
+    depends_on:
+      - wireguard
+    restart: unless-stopped
+
+  geoip-init:
+    image: alpine:3.20
+    container_name: geoip-init
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        DEST=/geoip/dbip-city-lite.mmdb
+        MARKER=/geoip/.month
+        MONTH=$$(date +%Y-%m)
+        if [ -f "$$DEST" ] && [ "$$(cat $$MARKER 2>/dev/null)" = "$$MONTH" ]; then
+          echo "DB-IP MMDB already current for $$MONTH"
+          exit 0
+        fi
+        apk add --no-cache wget >/dev/null
+        URL=https://download.db-ip.com/free/dbip-city-lite-$$MONTH.mmdb.gz
+        echo "Downloading $$URL"
+        if ! wget -q -O /tmp/db.mmdb.gz "$$URL"; then
+          PREV=$$(date -d "$$MONTH-01 -1 day" +%Y-%m 2>/dev/null || date +%Y-%m)
+          echo "Current month not published, falling back to $$PREV"
+          wget -q -O /tmp/db.mmdb.gz "https://download.db-ip.com/free/dbip-city-lite-$$PREV.mmdb.gz" || {
+            echo "WARN: could not download geolocation DB; peer map will be empty"
+            exit 0
+          }
+        fi
+        gunzip -c /tmp/db.mmdb.gz > "$$DEST"
+        echo "$$MONTH" > "$$MARKER"
+        rm -f /tmp/db.mmdb.gz
+        echo "Geolocation DB ready at $$DEST"
+    volumes:
+      - ./geoip:/geoip
+    restart: "no"
+
+  vaier-init:
+    image: busybox:1.37.0
+    container_name: vaier-init
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        # Vaier container runs as UID 1000 (Dockerfile USER directive). Bind mounts inherit
+        # host ownership, so we chown the config dirs once on every start.
+        for d in /vaier/config /traefik/config /wireguard/config /icons; do
+          [ -d "$$d" ] && chown -R 1000:1000 "$$d"
+        done
+        # #329: crowdsec bind-mounts this exact file (read-only, single-file mount) into its
+        # parsers/s02-enrich stage dir. A file that doesn't exist yet on the host makes Docker
+        # silently create a DIRECTORY at both ends instead — breaking both Vaier's write and
+        # crowdsec's read. Pre-touch it here, before crowdsec's own bind mount is ever set up
+        # (crowdsec depends_on this container completing).
+        mkdir -p /crowdsec-whitelist
+        touch /crowdsec-whitelist/vaier-trusted-networks.yaml
+        chown -R 1000:1000 /crowdsec-whitelist
+        # Escalating repeat-offender bans. Rendered here so the committed docker-compose.yml is the
+        # one source of truth (crowdsec/profiles/ is gitignored, like traefik/). Single-file-mounted
+        # RO into crowdsec at /etc/crowdsec/profiles.yaml. duration_expr is first-class on crowdsec
+        # 1.7 (no feature flag); GetDecisionsCount counts prior decisions for the same source, so the
+        # ban grows 4h -> 8h -> 12h with each repeat. on_success: break keeps the first matching
+        # profile's decision, exactly as the image default did.
+        mkdir -p /crowdsec-profiles
+        cat > /crowdsec-profiles/vaier-profiles.yaml <<'VAIER_BAN_PROFILES'
+        name: default_ip_remediation
+        filters:
+         - Alert.Remediation == true && Alert.GetScope() == "Ip"
+        decisions:
+         - type: ban
+           duration: 4h
+        duration_expr: Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4)
+        on_success: break
+        ---
+        name: default_range_remediation
+        filters:
+         - Alert.Remediation == true && Alert.GetScope() == "Range"
+        decisions:
+         - type: ban
+           duration: 4h
+        duration_expr: Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4)
+        on_success: break
+        VAIER_BAN_PROFILES
+        chown -R 1000:1000 /crowdsec-profiles
+    volumes:
+      - ./vaier/config:/vaier/config
+      - ./traefik/config:/traefik/config
+      - ./wireguard/config:/wireguard/config
+      - ./icons:/icons
+      - ./crowdsec/whitelist:/crowdsec-whitelist
+      - ./crowdsec/profiles:/crowdsec-profiles
+    restart: "no"
+
+  vaier:
+    image: getvaier/vaier:latest
+    container_name: vaier
+    # The JVM sizes its heap from the cgroup limit once one exists, so this cap and
+    # JAVA_TOOL_OPTIONS below must be read together: 55% of 768m is a ~422 MB heap,
+    # leaving ~346 MB for metaspace, code cache, thread stacks and direct buffers.
+    # Measured steady-state RSS is ~340 MB. Without the explicit percentage the JVM
+    # would fall back to its 25% default and starve itself down to a 192 MB heap.
+    mem_limit: 768m
+    # The host runs earlyoom with `--prefer '(java|mvn|buildkitd)$'` so a heavy build dies before
+    # anything else. Vaier is itself a JVM, which made the *running app* a preferred victim: memory
+    # pressure from a build would push the 1.9 GB box over the line and earlyoom would kill Vaier
+    # rather than the build.
+    #
+    # earlyoom ranks by /proc/<pid>/oom_score and adds +300 to a preferred name. -500 was NOT enough:
+    # it left Vaier at 362 + 300 = 662, still the highest-scoring process whenever no build was
+    # running, so it was killed anyway. -900 floors the app's own score at ~0, so even carrying the
+    # +300 preference it sits below an idle agent (~300) and far below a surefire JVM (~1000).
+    # It reserves no memory; it only decides who dies last.
+    oom_score_adj: -900
+    cap_add:
+      # Needed by VpnNetworkSetupAdapter and LanRouteAdapter, which shell out to
+      # `ip route` inside this container to install routes for the VPN subnet
+      # and relay-peer LAN CIDRs. WireGuard exec is unrelated and runs in the
+      # wireguard container's own namespace (which has its own NET_ADMIN).
+      - NET_ADMIN
+    environment:
+      # Heap ceiling as a share of the mem_limit above. Read the mem_limit comment before changing.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=55
+      # The zone Vaier reads local time in. The nightly fleet-backup schedule compares the configured
+      # hour against this zone, so "02:00" means 02:00 here — not 02:00 UTC. Defaults to UTC; set
+      # VAIER_TZ in .env (e.g. Europe/Oslo) to schedule in your own local time.
+      TZ: ${VAIER_TZ:-UTC}
+      VAIER_DOMAIN: ${VAIER_DOMAIN:-}
+      VAIER_PUBLIC_HOST: ${VAIER_PUBLIC_HOST:-}
+      VAIER_PUBLIC_IP: ${VAIER_PUBLIC_IP:-}
+      # Override the auto-detected LAN/VPC subnet (EC2 IMDS detects only the server's own /20).
+      # Set to the whole VPC CIDR (e.g. 172.31.0.0/16) to register machines in any subnet/AZ.
+      # Also threaded into server peers' client-side AllowedIPs so they can initiate connections
+      # back into the server's LAN through the tunnel (#204).
+      VAIER_SERVER_LAN_CIDR: ${VAIER_SERVER_LAN_CIDR:-}
+      # Presence of either provider's client id enables the per-service "Social" auth mode (#305) and
+      # tells Vaier the first-run password has closed (#264).
+      VAIER_OIDC_GOOGLE_CLIENT_ID: ${VAIER_OIDC_GOOGLE_CLIENT_ID:-}
+      VAIER_OIDC_GITHUB_CLIENT_ID: ${VAIER_OIDC_GITHUB_CLIENT_ID:-}
+      # Whether each secret is set in .env — never the secret — so Settings → Sign-in knows which
+      # providers .env owns (#264).
+      VAIER_OIDC_GOOGLE_CLIENT_SECRET_PRESENT: ${VAIER_OIDC_GOOGLE_CLIENT_SECRET:+yes}
+      VAIER_OIDC_GITHUB_CLIENT_SECRET_PRESENT: ${VAIER_OIDC_GITHUB_CLIENT_SECRET:+yes}
+      # Seeds/keeps this identity as an admin AccessEntry so the console is never locked out
+      # (self-heal in AccessFileAdapter, read via System.getenv). Must reach the container (#305).
+      VAIER_ADMIN_EMAIL: ${VAIER_ADMIN_EMAIL:-}
+      WIREGUARD_CONFIG_PATH: /wireguard/config
+      WIREGUARD_CONTAINER_NAME: wireguard
+      TRAEFIK_CONFIG_PATH: /traefik/config
+      TRAEFIK_API_URL: http://traefik:8080
+      VAIER_CONFIG_PATH: /vaier/config
+      DOCKER_HOST: tcp://docker-proxy:2375
+    depends_on:
+      vaier-init:
+        condition: service_completed_successfully
+      docker-proxy:
+        condition: service_started
+      wireguard:
+        condition: service_started
+      traefik:
+        condition: service_started
+      geoip-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./traefik/config:/traefik/config
+      - ./wireguard/config:/wireguard/config
+      - ./vaier/config:/vaier/config
+      - ./geoip:/geoip:ro
+      # Resolved service icons — read-write so a resolved icon is fetched online once then served
+      # from disk across restarts (icon.cache.path).
+      - ./icons:/icons
+      # #329: SecurityService (CrowdSecWhitelistFileAdapter) writes the trusted-networks
+      # allowlist here; crowdsec bind-mounts the same file read-only into its parsers stage.
+      - ./crowdsec/whitelist:/crowdsec-whitelist
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      # Tier 1 — PUBLIC router (no auth): serves the viewer-adaptive launchpad SHELL and its assets
+      # plus the public data feed, so a logged-out visitor gets the dashboard instead of the Google
+      # sign-in. Precisely whitelisted: the launchpad page + its static assets (styles.css, icons),
+      # the anonymous services feed, and the LAN docker-setup script. Never the Explorer or any admin
+      # API — those fall through to the Tier 3 catch-all below.
+      # The PathRegexp alternatives are the SURGICAL token-gated exemptions: they serve the per-peer
+      # (Slice 4b) and per-LAN-server setup scripts to a bare box being onboarded, which has no oauth2
+      # session yet. Each is anchored to a single id/name path segment + /setup only (NOT /setup.sh —
+      # the in-console download stays admin-gated) — nothing else is exposed. Each route is self-guarded
+      # by a single-use, ~15-min setup token validated inside Vaier (over HTTPS via websecure).
+      # #359: /app/android/vaier.apk is the Vaier app itself — the same signed package for every visitor,
+      # carrying no secret — and a phone must fetch it before it can sign in and enrol, so it is public.
+      - traefik.http.routers.vaier-public.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/`) || Path(`/index.html`) || Path(`/launchpad.html`) || Path(`/styles.css`) || Path(`/avatar.js`) || PathPrefix(`/icon`) || Path(`/favicon`) || Path(`/launchpad/services`) || Path(`/launchpad/events`) || Path(`/app/android/vaier.apk`) || Path(`/app/windows/VaierSetup.exe`) || Path(`/lan-servers/docker-setup.sh`) || PathRegexp(`^/vpn/peers/[^/]+/setup$`) || PathRegexp(`^/lan-servers/[^/]+/setup$`))
+      - traefik.http.routers.vaier-public.entrypoints=websecure
+      - traefik.http.routers.vaier-public.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-public.priority=200
+      # #359 slice 1b — ANONYMOUS ENROLMENT router: the three routes a phone needs when nobody is
+      # signed in on it. POST /vpn/enrolments registers the key the phone minted and starts it
+      # waiting; the ticket-anchored SSE path is that one phone's own stream; POST /vpn/peers/leave
+      # lets it take itself back out of the fleet, which forgetting the tunnel on the handset cannot.
+      # Its own router, so the launchpad's public allowlist above stays exactly as narrow as it was.
+      #
+      # Safe because nothing here reveals or changes the fleet on its own: the join code is four
+      # digits for a human to read off a screen and authorises NOTHING, the enrolment ticket is 32
+      # unguessable random bytes handed to the phone once, no server secret exists until an admin
+      # approves, at most 5 requests wait at a time and each dies after 10 minutes. Leaving proves
+      # possession of the peer's own preshared key — a secret only that phone and Vaier hold — and
+      # the peer is gone afterwards, so a replay has nothing left to remove. Standing is the same
+      # proof asked as a question — "am I still in?" — and changes nothing. The approve, refuse and
+      # pending routes stay on the Tier 3 admin catch-all, which is where the real decisions are.
+      # Rate-limited on a middleware of its own so the anonymous POSTs cannot be used to churn.
+      # #351: the one router on this host that keeps the CrowdSec bouncer — it is anonymous and no
+      # part of signing in, so it is not a recovery door. Every other router here is one.
+      - traefik.http.routers.vaier-enrolment.rule=Host(`vaier.${VAIER_DOMAIN}`) && ((Path(`/vpn/enrolments`) && Method(`POST`)) || PathRegexp(`^/vpn/enrolments/[A-Za-z0-9_-]{43}/events$`) || (Path(`/vpn/peers/leave`) && Method(`POST`)) || (Path(`/vpn/peers/standing`) && Method(`POST`)))
+      - traefik.http.routers.vaier-enrolment.entrypoints=websecure
+      - traefik.http.routers.vaier-enrolment.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-enrolment.priority=210
+      - traefik.http.routers.vaier-enrolment.middlewares=crowdsec-bouncer@file,vaier-enrolment-ratelimit,vaier-down,vaier-frame-guard@file
+      - traefik.http.middlewares.vaier-enrolment-ratelimit.ratelimit.average=10
+      - traefik.http.middlewares.vaier-enrolment-ratelimit.ratelimit.period=1m
+      - traefik.http.middlewares.vaier-enrolment-ratelimit.ratelimit.burst=5
+      # Hello and goodbye, on the tunnel door only. Every peer reaches it from WireGuard's one address, so
+      # the bucket is shared and generous; the proof in the body is what says who is talking.
+      - traefik.http.routers.vaier-tunnel.rule=Method(`POST`) && (Path(`/vpn/peers/hello`) || Path(`/vpn/peers/goodbye`))
+      - traefik.http.routers.vaier-tunnel.entrypoints=tunnel
+      - traefik.http.routers.vaier-tunnel.service=vaier
+      - traefik.http.routers.vaier-tunnel.middlewares=crowdsec-bouncer@file,vaier-tunnel-ratelimit
+      - traefik.http.middlewares.vaier-tunnel-ratelimit.ratelimit.average=60
+      - traefik.http.middlewares.vaier-tunnel-ratelimit.ratelimit.period=1m
+      - traefik.http.middlewares.vaier-tunnel-ratelimit.ratelimit.burst=30
+      # Tier 2 — IDENTITY-OPTIONAL router: the viewer-adaptive endpoints. oauth2-authn only — it
+      # injects the identity headers (X-Auth-Request-*) when a session exists, and returns 401 for an
+      # anonymous caller (the page treats that as anonymous and falls back to /launchpad/services).
+      # NO oauth2-signin (so no forced-login redirect) and NO vaier-authz (so no admin gate): a
+      # signed-in non-admin can read its own identity and its own reachable tiles.
+      - traefik.http.routers.vaier-identity.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/launchpad/services-authenticated`) || Path(`/users/me`) || Path(`/published-services/events`))
+      - traefik.http.routers.vaier-identity.entrypoints=websecure
+      - traefik.http.routers.vaier-identity.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-identity.middlewares=oauth2-authn@file,vaier-down,vaier-frame-guard@file
+      - traefik.http.routers.vaier-identity.priority=250
+      # Tier 3 — ADMIN catch-all: everything else (the Explorer, all admin APIs). Gated by the full
+      # Social chain, and vaier-authz enforces admin for the console — non-admins get 403.
+      - traefik.http.routers.vaier.rule=Host(`vaier.${VAIER_DOMAIN}`)
+      - traefik.http.routers.vaier.entrypoints=websecure
+      - traefik.http.routers.vaier.tls.certresolver=letsencrypt
+      # #305: the console is gated by the Social chain (Google). The oauth2-* middlewares live in
+      # the file provider (kept alive by social-gated services + the startup backfill).
+      # #258: vaier-frame-guard is APPENDED, never prepended — TraefikReverseProxyAdapter reports a
+      # router's auth by the first auth-looking middleware on the chain, so the order above must stand.
+      - traefik.http.routers.vaier.middlewares=oauth2-signin@file,oauth2-authn@file,vaier-authz@file,vaier-down,vaier-frame-guard@file
+      - traefik.http.routers.vaier.priority=100
+      # /oauth2/* on the console host must reach oauth2-proxy (sign-in / callback / sign_out),
+      # above the console router so the Google flow isn't swallowed by the auth chain.
+      - traefik.http.routers.vaier-oauth2.rule=Host(`vaier.${VAIER_DOMAIN}`) && PathPrefix(`/oauth2/`)
+      - traefik.http.routers.vaier-oauth2.entrypoints=websecure
+      - traefik.http.routers.vaier-oauth2.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-oauth2.priority=300
+      - traefik.http.routers.vaier-oauth2.service=oauth2-proxy
+      - traefik.http.routers.vaier-oauth2.middlewares=vaier-frame-guard@file
+      - traefik.http.services.vaier.loadbalancer.server.port=8080
+      # When the Vaier backend itself is unreachable (502/503/504), the vaier-down errors middleware
+      # (defined on vaier-offline) serves the branded offline page instead of Traefik's bare "Bad
+      # gateway". vaier-public also carries it so unauthenticated public paths degrade gracefully.
+      - traefik.http.routers.vaier-public.middlewares=vaier-down,vaier-frame-guard@file
+    networks:
+      - vaier-network
+
+  # --- #305 social login: oauth2-proxy is the forward-auth gatekeeper; Vaier owns authorization
+  # via /authz/verify. This is mandatory infrastructure — the sole auth gateway — so it always
+  # starts with `docker compose up -d` (no `social` profile). oauth2-proxy no longer talks to Google
+  # directly: it federates through the Dex identity broker (see the dex service below), which fans
+  # out to the Google and GitHub connectors. Identity stays keyed on email, so /authz/verify,
+  # access.yml and the Traefik chain are unchanged.
+  #
+  #   Traefik -> oauth2-proxy -> Dex -> Google / GitHub
+  #
+  # Set the upstream OAuth credentials in .env: VAIER_OIDC_GOOGLE_CLIENT_ID / *_SECRET and
+  # VAIER_OIDC_GITHUB_CLIENT_ID / *_SECRET. VAIER_DEX_CLIENT_SECRET (the oauth2-proxy<->Dex shared
+  # secret) and VAIER_OAUTH2_COOKIE_SECRET are not operator-authored — install.sh generates them into
+  # .env (see its ensure_secret step). If either is missing, its ${..:-} default is EMPTY, and an empty
+  # Dex static-client secret makes Dex refuse to start ("Secret ... is required for client vaier-oauth2").
+  #
+  # oauth2-proxy-init renders oauth2-proxy's alpha config into the shared ./oauth2/config volume so
+  # the repo ships a generic, secret-free compose: (1) the oauth2-proxy<->Dex shared secret is
+  # written to a mode-0600 client-secret file (referenced via clientSecretFile, never inlined), and
+  # (2) alpha.yaml is rendered with only VAIER_DOMAIN substituted into the Dex issuer URL. Both files
+  # are chowned to oauth2-proxy's uid:gid (65532:65532 — the image's nonroot USER) so the non-root
+  # proxy can read them. Re-rendered on every start so a rotated secret/domain is picked up.
+  oauth2-proxy-init:
+    image: alpine:3.20
+    container_name: oauth2-proxy-init
+    environment:
+      - VAIER_DOMAIN=${VAIER_DOMAIN:-}
+      - VAIER_DEX_CLIENT_SECRET=${VAIER_DEX_CLIENT_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+      # Same four provider variables dex-init reads, applied by the same rule (both id and secret
+      # non-empty) — see the sign-in render below.
+      - VAIER_OIDC_GOOGLE_CLIENT_ID=${VAIER_OIDC_GOOGLE_CLIENT_ID:-}
+      - VAIER_OIDC_GOOGLE_CLIENT_SECRET=${VAIER_OIDC_GOOGLE_CLIENT_SECRET:-}
+      - VAIER_OIDC_GITHUB_CLIENT_ID=${VAIER_OIDC_GITHUB_CLIENT_ID:-}
+      - VAIER_OIDC_GITHUB_CLIENT_SECRET=${VAIER_OIDC_GITHUB_CLIENT_SECRET:-}
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        umask 077
+        printf '%s' "$$VAIER_DEX_CLIENT_SECRET" > /oauth2/config/client-secret
+
+        # #264: a provider whose pair .env leaves blank may come from Settings, in the file Vaier
+        # writes — the same lines dex-init reads. Parsed key by key and stripped to the charset Vaier
+        # validates; never sourced, because this runs as root.
+        providers_file=/vaier/config/sign-in-providers.env
+        from_settings() {
+          if [ -f "$${providers_file}" ]; then
+            sed -n "s/^$$1=//p" "$${providers_file}" | head -n 1 | tr -cd 'A-Za-z0-9._-'
+          fi
+        }
+        if [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_ID}" ] || [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_SECRET}" ]; then
+          VAIER_OIDC_GOOGLE_CLIENT_ID="$$(from_settings GOOGLE_CLIENT_ID)"
+          VAIER_OIDC_GOOGLE_CLIENT_SECRET="$$(from_settings GOOGLE_CLIENT_SECRET)"
+        fi
+        if [ -z "$${VAIER_OIDC_GITHUB_CLIENT_ID}" ] || [ -z "$${VAIER_OIDC_GITHUB_CLIENT_SECRET}" ]; then
+          VAIER_OIDC_GITHUB_CLIENT_ID="$$(from_settings GITHUB_CLIENT_ID)"
+          VAIER_OIDC_GITHUB_CLIENT_SECRET="$$(from_settings GITHUB_CLIENT_SECRET)"
+        fi
+
+        # #332 follow-up: a provider is offered only when BOTH its client id and secret are set —
+        # byte-for-byte the rule dex-init uses to decide which connectors exist. A button for a
+        # provider Dex has no connector for dead-ends in "Bad Request: Connector ID does not match a
+        # valid Connector", so the buttons and the allow-list below are rendered from these flags.
+        google_ok=1
+        [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_ID}" ] && google_ok=0
+        [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_SECRET}" ] && google_ok=0
+
+        github_ok=1
+        [ -z "$${VAIER_OIDC_GITHUB_CLIENT_ID}" ] && github_ok=0
+        [ -z "$${VAIER_OIDC_GITHUB_CLIENT_SECRET}" ] && github_ok=0
+
+        # oauth2-proxy takes a single --custom-templates-dir, so the committed templates are copied
+        # into the runtime dir and sign_in.html is trimmed there; error.html travels along unchanged.
+        # The committed page keeps every button, each fenced by <!--provider:x--> markers, and an
+        # unconfigured provider's fence is deleted from the rendered copy.
+        mkdir -p /oauth2/config/templates
+        cp /templates-src/error.html /oauth2/config/templates/error.html
+        cp /templates-src/sign_in.html /oauth2/config/templates/sign_in.html
+        allow=""
+        # #264: the first-run password — dex-init's local connector — is offered by dex-init's door
+        # rule: while no provider exists, or while Settings hold the door open because no admin has
+        # signed in through the provider added there yet.
+        first_run_open=0
+        if [ "$${google_ok}" = 0 ] && [ "$${github_ok}" = 0 ]; then first_run_open=1; fi
+        if [ "$$(from_settings FIRST_RUN_DOOR)" = open ]; then first_run_open=1; fi
+        if [ "$${first_run_open}" = 1 ]; then
+          allow="{value: local}"
+        else
+          sed -i '/<!--provider:local-->/,/<!--\/provider:local-->/d' /oauth2/config/templates/sign_in.html
+        fi
+        if [ "$${google_ok}" = 1 ]; then
+          [ -n "$${allow}" ] && allow="$${allow}, "
+          allow="$${allow}{value: google}"
+        else
+          sed -i '/<!--provider:google-->/,/<!--\/provider:google-->/d' /oauth2/config/templates/sign_in.html
+        fi
+        if [ "$${github_ok}" = 1 ]; then
+          [ -n "$${allow}" ] && allow="$${allow}, "
+          allow="$${allow}{value: github}"
+          # GitHub is the secondary choice beside Google; as the only way in it is the primary action.
+          [ "$${google_ok}" = 0 ] && sed -i 's/class="btn btn-secondary"/class="btn"/' /oauth2/config/templates/sign_in.html
+        else
+          sed -i '/<!--provider:github-->/,/<!--\/provider:github-->/d' /oauth2/config/templates/sign_in.html
+        fi
+        # Beside a provider, the first-run password is the secondary choice.
+        if [ "$${first_run_open}" = 1 ] && { [ "$${google_ok}" = 1 ] || [ "$${github_ok}" = 1 ]; }; then
+          sed -i '/<!--provider:local-->/,/<!--\/provider:local-->/s/class="btn"/class="btn btn-secondary"/' /oauth2/config/templates/sign_in.html
+        fi
+
+        # Unquoted heredoc: the shell substitutes only $${VAIER_DOMAIN} and $${allow}; the alpha body
+        # contains no other $$ so nothing else is interpolated.
+        cat > /oauth2/config/alpha.yaml <<EOF
+        injectRequestHeaders:
+        - {name: X-Forwarded-Groups, values: [{claimSource: {claim: groups}}]}
+        - {name: X-Forwarded-User, values: [{claimSource: {claim: user}}]}
+        - {name: X-Forwarded-Email, values: [{claimSource: {claim: email}}]}
+        - {name: X-Forwarded-Preferred-Username, values: [{claimSource: {claim: preferred_username}}]}
+        - {name: X-Forwarded-Name, values: [{claimSource: {claim: name}}]}
+        injectResponseHeaders:
+        - {name: X-Auth-Request-User, values: [{claimSource: {claim: user}}]}
+        - {name: X-Auth-Request-Email, values: [{claimSource: {claim: email}}]}
+        - {name: X-Auth-Request-Preferred-Username, values: [{claimSource: {claim: preferred_username}}]}
+        - {name: X-Auth-Request-Groups, values: [{claimSource: {claim: groups}}]}
+        - {name: X-Auth-Request-Name, values: [{claimSource: {claim: name}}]}
+        - {name: X-Auth-Request-Connector, values: [{claimSource: {claim: federated_claims.connector_id}}]}
+        - {name: X-Auth-Request-Connector-Uid, values: [{claimSource: {claim: federated_claims.user_id}}]}
+        providers:
+        - id: dex
+          provider: oidc
+          clientID: vaier-oauth2
+          clientSecretFile: /oauth2/config/client-secret
+          # federated:id makes Dex emit federated_claims (connector_id/user_id) so we can record which
+          # identity provider each user last signed in with; the rest are oauth2-proxy's defaults.
+          scope: openid email profile federated:id
+          oidcConfig:
+            issuerURL: https://dex.$${VAIER_DOMAIN}
+            audienceClaims: [aud]
+            emailClaim: email
+            groupsClaim: groups
+            userIDClaim: email
+            insecureSkipNonce: true
+          # oauth2-proxy only exposes a claim to header injection if it is first extracted into the
+          # session here. Extraction is dot-path aware and stores each value under the FULL dotted
+          # key, and the injectResponseHeaders lookup is a flat match on that same key — so the
+          # strings here must be byte-identical to the claimSource.claim values above. Without the
+          # two federated_claims leaves, X-Auth-Request-Connector[-Uid] ship empty.
+          additionalClaims: [name, federated_claims.connector_id, federated_claims.user_id]
+          # connector_id is user-supplied by the sign-in buttons; oauth2-proxy only forwards a
+          # user value when it matches an allow rule, so Dex jumps straight to the chosen provider
+          # instead of showing its own chooser. Only the configured providers are allow-listed — a
+          # forwarded connector_id Dex has no connector for is a Bad Request. No approval_prompt=force:
+          # forcing re-consent on every login is what made users re-grant access each time — Dex's
+          # skipApprovalScreen handles it.
+          loginURLParameters:
+          - {name: connector_id, allow: [$${allow}]}
+        server:
+          BindAddress: 0.0.0.0:4180
+        upstreamConfig:
+          upstreams: [{id: static://202, path: /, static: true, staticCode: 202}]
+        EOF
+        chown 65532:65532 /oauth2/config/client-secret /oauth2/config/alpha.yaml
+        chown -R 65532:65532 /oauth2/config/templates
+    volumes:
+      - ./oauth2/config:/oauth2/config
+      - ./oauth2/templates:/templates-src:ro
+      # #264: sign-in-providers.env, written by Vaier from Settings → Sign-in.
+      - ./vaier/config:/vaier/config:ro
+    restart: "no"
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.3
+    container_name: oauth2-proxy
+    mem_limit: 96m
+    command:
+      # Flags kept as flags — not covered by alpha config, or conflicting with it.
+      - --cookie-secret=${VAIER_OAUTH2_COOKIE_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+      - --cookie-domain=.${VAIER_DOMAIN}
+      - --cookie-secure=true
+      # Lax SameSite: defence-in-depth against cross-site use of the auth cookie (e.g. a WebSocket
+      # upgrade from another origin). Safe for the top-level Google/Dex sign-in redirect flow.
+      - --cookie-samesite=lax
+      - --whitelist-domain=.${VAIER_DOMAIN}
+      - --email-domain=*
+      - --reverse-proxy=true
+      - --redirect-url=https://oauth2.${VAIER_DOMAIN}/oauth2/callback
+      # Brand the sign-in page in Vaier's dark theme (overrides only sign_in.html + error.html).
+      # The rendered copy, not the committed source: oauth2-proxy-init trims the sign-in page down
+      # to the providers this install actually has credentials for.
+      - --custom-templates-dir=/oauth2/config/templates
+      # Provider (generic OIDC brokered by Dex), client id/secret, upstream, header injection (incl.
+      # the name claim) and the bind address now come from the rendered alpha config — see oauth2-proxy-init.
+      - --alpha-config=/oauth2/config/alpha.yaml
+    volumes:
+      - ./oauth2/config:/oauth2/config:ro
+    depends_on:
+      oauth2-proxy-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.oauth2-proxy.rule=Host(`oauth2.${VAIER_DOMAIN}`)
+      - traefik.http.routers.oauth2-proxy.entrypoints=websecure
+      - traefik.http.routers.oauth2-proxy.tls.certresolver=letsencrypt
+      # #258: a Vaier-owned surface, so it carries frame protection. Nothing frames the sign-in host.
+      - traefik.http.routers.oauth2-proxy.middlewares=vaier-frame-guard@file
+      - traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180
+    networks:
+      - vaier-network
+
+  # --- #305 follow-up: Dex OIDC broker. Sits behind oauth2-proxy and federates Google + GitHub, so
+  # a user signs in with either provider while oauth2-proxy stays the single forward-auth gatekeeper
+  # and identity stays keyed on email. Mandatory infrastructure — no `social` profile.
+  #
+  # dex-init mirrors oauth2-proxy-init: it renders config.yaml from the operator credentials and
+  # chowns it to Dex's nonroot uid:gid (1001:1001) so Dex can read it. Re-rendered on every start so
+  # rotated credentials/domain are picked up. Unlike oauth2-proxy (which references its client secret
+  # via clientSecretFile), Dex has NO file-based secret option for connectors or for staticClients —
+  # so all three secrets are rendered directly into config.yaml, which is written mode-0600 (umask
+  # 077) and owned by Dex. It lives in the gitignored ./dex/config runtime volume and is never
+  # committed. This is the standard Dex pattern given its config schema.
+  #
+  # #332: each provider is independently optional — a connector is only appended when BOTH its
+  # client id and secret are non-empty, so an operator who wants only Google sign-in never has to
+  # register a GitHub OAuth App. A blank oauth2-proxy<->Dex shared secret fails fast by name.
+  #
+  # #264: with ZERO providers configured, Dex opens its own local connector for one account instead
+  # of refusing to start — the first-run password. It is minted once (the file is the truth across
+  # restarts), bcrypt-hashed into Dex's config, and left at /vaier/config/first-run-password (owner
+  # 1000, mode 0600) for Vaier to print in its own log. The moment a provider exists the password
+  # DB is not written and the file is removed, so the door is exactly as old as the gap it fills.
+  #
+  # #264 slice 2: a provider added from Settings lives in ./vaier/config/sign-in-providers.env, which
+  # also holds the door open until an admin signs in through that provider (Vaier then rewrites the
+  # file and re-runs this container through docker-proxy — the only start it permits).
+  dex-init:
+    image: alpine:3.20
+    container_name: dex-init
+    environment:
+      - VAIER_DOMAIN=${VAIER_DOMAIN:-}
+      - VAIER_ADMIN_EMAIL=${VAIER_ADMIN_EMAIL:-}
+      - ACME_EMAIL=${ACME_EMAIL:-}
+      - VAIER_OIDC_GOOGLE_CLIENT_ID=${VAIER_OIDC_GOOGLE_CLIENT_ID:-}
+      - VAIER_OIDC_GOOGLE_CLIENT_SECRET=${VAIER_OIDC_GOOGLE_CLIENT_SECRET:-}
+      - VAIER_OIDC_GITHUB_CLIENT_ID=${VAIER_OIDC_GITHUB_CLIENT_ID:-}
+      - VAIER_OIDC_GITHUB_CLIENT_SECRET=${VAIER_OIDC_GITHUB_CLIENT_SECRET:-}
+      - VAIER_DEX_CLIENT_SECRET=${VAIER_DEX_CLIENT_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        umask 077
+
+        # Fail fast on a blank shared secret — this one is Auto-generated by install.sh, so a
+        # blank value means a hand-edited .env lost it, not an operator choice.
+        if [ -z "$${VAIER_DEX_CLIENT_SECRET}" ]; then
+          echo "dex-init: VAIER_DEX_CLIENT_SECRET is missing or blank (the oauth2-proxy<->Dex shared secret)" >&2
+          exit 1
+        fi
+
+        # #264: a provider whose pair .env leaves blank may come from Settings, in the file Vaier
+        # writes — .env wins wherever it holds both halves. Parsed key by key and stripped to the
+        # charset Vaier validates; never sourced, because this runs as root.
+        providers_file=/vaier/config/sign-in-providers.env
+        from_settings() {
+          if [ -f "$${providers_file}" ]; then
+            sed -n "s/^$$1=//p" "$${providers_file}" | head -n 1 | tr -cd 'A-Za-z0-9._-'
+          fi
+        }
+        if [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_ID}" ] || [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_SECRET}" ]; then
+          VAIER_OIDC_GOOGLE_CLIENT_ID="$$(from_settings GOOGLE_CLIENT_ID)"
+          VAIER_OIDC_GOOGLE_CLIENT_SECRET="$$(from_settings GOOGLE_CLIENT_SECRET)"
+        fi
+        if [ -z "$${VAIER_OIDC_GITHUB_CLIENT_ID}" ] || [ -z "$${VAIER_OIDC_GITHUB_CLIENT_SECRET}" ]; then
+          VAIER_OIDC_GITHUB_CLIENT_ID="$$(from_settings GITHUB_CLIENT_ID)"
+          VAIER_OIDC_GITHUB_CLIENT_SECRET="$$(from_settings GITHUB_CLIENT_SECRET)"
+        fi
+
+        # A connector is only appended when BOTH its client id and secret are non-empty, so a
+        # provider an operator doesn't use is simply never written. Missing pieces are collected up
+        # front so the fail-fast error below can name exactly which variables are absent.
+        google_ok=1
+        missing_google=""
+        [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_ID}" ] && { google_ok=0; missing_google="$${missing_google} VAIER_OIDC_GOOGLE_CLIENT_ID"; }
+        [ -z "$${VAIER_OIDC_GOOGLE_CLIENT_SECRET}" ] && { google_ok=0; missing_google="$${missing_google} VAIER_OIDC_GOOGLE_CLIENT_SECRET"; }
+
+        github_ok=1
+        missing_github=""
+        [ -z "$${VAIER_OIDC_GITHUB_CLIENT_ID}" ] && { github_ok=0; missing_github="$${missing_github} VAIER_OIDC_GITHUB_CLIENT_ID"; }
+        [ -z "$${VAIER_OIDC_GITHUB_CLIENT_SECRET}" ] && { github_ok=0; missing_github="$${missing_github} VAIER_OIDC_GITHUB_CLIENT_SECRET"; }
+
+        first_run=/vaier/config/first-run-password
+
+        # Unquoted heredocs: the shell substitutes $${VAIER_DOMAIN}, $${VAIER_DEX_CLIENT_SECRET} and
+        # each configured provider's client id/secret; the config body contains no other $$ so
+        # nothing else is interpolated. Each configured provider's block is appended in its own
+        # heredoc, so an unconfigured provider's block is simply never written.
+        cat > /dex/config/config.yaml <<EOF
+        issuer: https://dex.$${VAIER_DOMAIN}
+        storage: {type: memory}
+        web: {http: 0.0.0.0:5556}
+        oauth2: {skipApprovalScreen: true}
+        frontend: {dir: /srv/dex/web, theme: vaier, issuer: Vaier}
+        staticClients:
+        - id: vaier-oauth2
+          name: Vaier
+          secret: $${VAIER_DEX_CLIENT_SECRET}
+          redirectURIs: [https://oauth2.$${VAIER_DOMAIN}/oauth2/callback]
+        EOF
+
+        # The first-run door: open while no provider exists, or while Settings hold it open because
+        # the provider added there has not yet let an admin in. Vaier closes it on that sign-in.
+        first_run_open=0
+        if [ "$${google_ok}" = 0 ] && [ "$${github_ok}" = 0 ]; then
+          first_run_open=1
+          echo "dex-init: no identity provider is configured (missing:$${missing_google}$${missing_github}) — opening the first-run door; the password is in 'docker compose logs vaier'" >&2
+        fi
+        if [ "$$(from_settings FIRST_RUN_DOOR)" = open ]; then first_run_open=1; fi
+
+        if [ "$${first_run_open}" = 1 ]; then
+          # ACME_EMAIL is the operator's own address, so a provider sign-in under it later finds the
+          # admin this account became — the handover needs no step of its own.
+          email="$${VAIER_ADMIN_EMAIL:-$${ACME_EMAIL:-admin@$${VAIER_DOMAIN}}}"
+          secret=""
+          [ -f "$${first_run}" ] && secret="$$(sed -n 2p "$${first_run}")"
+          [ -n "$${secret}" ] || secret="$$(head -c 33 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=\n')"
+          printf '%s\n%s\n' "$${email}" "$${secret}" > "$${first_run}"
+          chmod 600 "$${first_run}"
+          chown 1000:1000 "$${first_run}"
+          # Dex takes bcrypt only; alpine has no bcrypt tool, so this branch — and only this one —
+          # fetches apache2-utils for htpasswd.
+          apk add --no-cache -q apache2-utils >/dev/null
+          hash="$$(htpasswd -nbBC 10 "" "$${secret}" | cut -d: -f2)"
+          cat >> /dex/config/config.yaml <<EOF
+        enablePasswordDB: true
+        staticPasswords:
+        - email: $${email}
+          username: $${email}
+          userID: first-run
+          hash: "$${hash}"
+        EOF
+        else
+          rm -f "$${first_run}"
+        fi
+        if [ "$${google_ok}" = 1 ] || [ "$${github_ok}" = 1 ]; then
+          echo "connectors:" >> /dex/config/config.yaml
+        fi
+
+        if [ "$${google_ok}" = 1 ]; then
+          cat >> /dex/config/config.yaml <<EOF
+        - type: google
+          id: google
+          name: Google
+          config: {clientID: $${VAIER_OIDC_GOOGLE_CLIENT_ID}, clientSecret: $${VAIER_OIDC_GOOGLE_CLIENT_SECRET}, redirectURI: https://dex.$${VAIER_DOMAIN}/callback}
+        EOF
+        fi
+
+        if [ "$${github_ok}" = 1 ]; then
+          cat >> /dex/config/config.yaml <<EOF
+        - type: github
+          id: github
+          name: GitHub
+          config: {clientID: $${VAIER_OIDC_GITHUB_CLIENT_ID}, clientSecret: $${VAIER_OIDC_GITHUB_CLIENT_SECRET}, redirectURI: https://dex.$${VAIER_DOMAIN}/callback}
+        EOF
+        fi
+
+        chown 1001:1001 /dex/config/config.yaml
+    volumes:
+      - ./dex/config:/dex/config
+      - ./vaier/config:/vaier/config
+    restart: "no"
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.45.1
+    container_name: dex
+    mem_limit: 96m
+    command: [dex, serve, /dex/config/config.yaml]
+    volumes:
+      - ./dex/config:/dex/config:ro
+      # Brand Dex's own screens (error, connector picker) in Vaier's dark theme. Only the theme dir is
+      # overlaid onto the image's built-in web assets; frontend.dir in config.yaml points Dex at the
+      # on-disk copy so it picks up this theme (see dex-init).
+      - ./dex/themes/vaier:/srv/dex/web/themes/vaier:ro
+    depends_on:
+      dex-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dex.rule=Host(`dex.${VAIER_DOMAIN}`)
+      - traefik.http.routers.dex.entrypoints=websecure
+      - traefik.http.routers.dex.tls.certresolver=letsencrypt
+      # #258: a Vaier-owned surface, so it carries frame protection. Dex's login page is never framed.
+      - traefik.http.routers.dex.middlewares=vaier-frame-guard@file
+      - traefik.http.services.dex.loadbalancer.server.port=5556
+    networks:
+      - vaier-network
+
+  # Tiny static page server that stands in for Vaier when Vaier is down. Deliberately independent of
+  # the vaier container so the branded offline page is still reachable while Vaier is unavailable.
+  vaier-offline:
+    image: nginx:1.27.5-alpine
+    container_name: vaier-offline
+    mem_limit: 32m
+    restart: unless-stopped
+    volumes:
+      - ./offline/html:/usr/share/nginx/html:ro
+      - ./offline/default.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.vaier-offline.loadbalancer.server.port=80
+      # Fallback router for the Vaier host. Its priority sits ABOVE the self-published file-provider
+      # router (priority 30 in remote-apps.yml, which still points at the dead backend when Vaier is
+      # down) but BELOW Vaier's own docker-label routers (priority 100/200). So while Vaier is up its
+      # real routers win; when the vaier container stops, those drop away and this one becomes the
+      # highest match — serving the branded offline page for any path instead of "Bad gateway".
+      - traefik.http.routers.vaier-offline.rule=Host(`vaier.${VAIER_DOMAIN}`)
+      - traefik.http.routers.vaier-offline.priority=50
+      - traefik.http.routers.vaier-offline.entrypoints=websecure
+      - traefik.http.routers.vaier-offline.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-offline.service=vaier-offline
+      # #258: the offline page is served on Vaier's own host, so it is a Vaier surface too.
+      - traefik.http.routers.vaier-offline.middlewares=vaier-frame-guard@file
+      # Also catch app-level gateway errors while the vaier container is still running (e.g. a
+      # mid-restart 502/503/504): the errors middleware swaps in the same static page.
+      - traefik.http.middlewares.vaier-down.errors.status=502-504
+      - traefik.http.middlewares.vaier-down.errors.service=vaier-offline
+      - traefik.http.middlewares.vaier-down.errors.query=/
+    networks:
+      - vaier-network

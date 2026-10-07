@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaier — Self-hosted infrastructure for homelab developers</title>
+    <meta name="description" content="Vaier wires together WireGuard, Traefik, and Google or GitHub sign-in (via oauth2-proxy) into a single web UI. A domain and an email are all it needs to boot: sign in with the first-run password from its own log, add a provider when you want to invite others. One wildcard DNS record covers everything — add a Docker container on any VPN peer, pick a subdomain, and Vaier handles the reverse proxy and HTTPS automatically.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22 fill=%22none%22 stroke=%22%234fc3f7%22 stroke-width=%221.5%22 stroke-linecap=%22round%22><circle cx=%228%22 cy=%228%22 r=%222.2%22 fill=%22%234fc3f7%22 stroke=%22none%22/><line x1=%222.5%22 y1=%223.5%22 x2=%226%22 y2=%226.5%22/><line x1=%2213.5%22 y1=%223.5%22 x2=%2210%22 y2=%226.5%22/><line x1=%222.5%22 y1=%2212.5%22 x2=%226%22 y2=%229.5%22/><line x1=%2213.5%22 y1=%2212.5%22 x2=%2210%22 y2=%229.5%22/><circle cx=%222.5%22 cy=%223.5%22 r=%221.5%22 fill=%22%234fc3f7%22 stroke=%22none%22/><circle cx=%2213.5%22 cy=%223.5%22 r=%221.5%22 fill=%22%234fc3f7%22 stroke=%22none%22/><circle cx=%222.5%22 cy=%2212.5%22 r=%221.5%22 fill=%22%234fc3f7%22 stroke=%22none%22/><circle cx=%2213.5%22 cy=%2212.5%22 r=%221.5%22 fill=%22%234fc3f7%22 stroke=%22none%22/></svg>">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { min-height: 100vh; }
+
+        .hero {
+            padding: 4.5rem 1.5rem 3rem;
+            max-width: 980px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .hero-logo {
+            display: inline-flex;
+            margin-bottom: 1.75rem;
+            filter: drop-shadow(0 0 24px rgba(79, 195, 247, 0.25));
+        }
+
+        .hero h1 {
+            font-size: 2.6rem;
+            font-weight: 600;
+            line-height: 1.15;
+            color: var(--text);
+            margin-bottom: 1.1rem;
+            letter-spacing: -0.01em;
+        }
+
+        .hero h1 .accent { color: var(--accent); }
+
+        .hero p.lede {
+            font-size: 1.02rem;
+            color: var(--text-muted);
+            max-width: 720px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+
+        .hero-actions {
+            display: inline-flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .hero-badges {
+            margin-top: 2rem;
+            display: inline-flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+
+        .hero-badges .badge-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            background: var(--bg-panel);
+        }
+
+        .hero-badges .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 4px var(--green);
+        }
+
+        section {
+            padding: 3rem 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .section-heading h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.005em;
+        }
+
+        .section-heading .crumb {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-family: var(--mono);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .feature {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 1.1rem 1.15rem;
+            transition: border-color 0.12s, background 0.12s;
+        }
+
+        .feature:hover {
+            border-color: var(--border-hi);
+            background: #303033;
+        }
+
+        .feature-icon {
+            color: var(--accent);
+            width: 22px;
+            height: 22px;
+            margin-bottom: 0.7rem;
+        }
+
+        .feature h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.35rem;
+        }
+
+        .feature p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        .feature code {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            color: var(--orange);
+            background: rgba(206, 145, 120, 0.08);
+            padding: 0 0.25rem;
+            border-radius: 2px;
+        }
+
+        .diagram-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .diagram-wrap svg { max-width: 100%; height: auto; }
+
+        .diagram-caption {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 720px;
+            line-height: 1.6;
+        }
+
+        .code {
+            background: #161616;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.9rem 1.1rem;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            color: var(--text);
+            overflow-x: auto;
+            line-height: 1.7;
+            white-space: pre;
+        }
+
+        .code .comment { color: var(--text-dim); }
+        .code .cmd     { color: var(--green); }
+        .code .str     { color: var(--orange); }
+        .code .var     { color: var(--yellow); }
+
+        .steps {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 36px 1fr;
+            gap: 0.85rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 1.1rem 1.15rem;
+        }
+
+        .step-num {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(79, 195, 247, 0.12);
+            border: 1px solid rgba(79, 195, 247, 0.35);
+            border-radius: 2px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-body h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.45rem;
+        }
+
+        .step-body p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-bottom: 0.7rem;
+        }
+
+        .step-body p:last-child { margin-bottom: 0; }
+
+        .step-body code {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            color: var(--orange);
+        }
+
+        .why {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .why-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 1.15rem;
+        }
+
+        .why-card .label {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+        }
+
+        .why-card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.6rem;
+        }
+
+        .why-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .shots { display: grid; gap: 0.75rem; }
+        .shots-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .shot {
+            margin: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .shot img { display: block; width: 100%; height: auto; }
+        .shots-pair .shot img { aspect-ratio: 1440 / 630; object-fit: cover; object-position: top left; }
+        .shot figcaption { padding: 0.7rem 1rem; font-size: 0.82rem; color: var(--text-muted); }
+        .step-body { min-width: 0; }
+
+        footer {
+            border-top: 1px solid var(--border);
+            background: var(--bg-panel);
+            padding: 2rem 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .footer-inner a { color: var(--text-muted); }
+        .footer-inner a:hover { color: var(--accent); text-decoration: none; }
+
+        .footer-links {
+            display: flex;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+        }
+
+        @media (max-width: 600px) {
+            .hero { padding: 2.5rem 1rem 2rem; }
+            .hero h1 { font-size: 1.85rem; }
+            .hero p.lede { font-size: 0.92rem; }
+            section { padding: 2rem 1rem; }
+            .section-heading h2 { font-size: 1.25rem; }
+            .why, .shots-pair { grid-template-columns: 1fr; }
+            .diagram-wrap { padding: 1.25rem 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="#top" class="topbar-brand" aria-label="Vaier">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <circle cx="8" cy="8" r="2.2" fill="currentColor" stroke="none"/>
+                <line x1="2.5" y1="3.5" x2="6" y2="6.5"/><line x1="13.5" y1="3.5" x2="10" y2="6.5"/>
+                <line x1="2.5" y1="12.5" x2="6" y2="9.5"/><line x1="13.5" y1="12.5" x2="10" y2="9.5"/>
+                <circle cx="2.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="13.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="2.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="13.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+            <span>V<span class="brand-ai">ai</span>er</span>
+        </a>
+        <nav class="topbar-nav">
+            <a href="#features" class="topbar-item">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1.5" y="2" width="13" height="4.5" rx="1"/>
+                    <rect x="1.5" y="9.5" width="13" height="4.5" rx="1"/>
+                    <circle cx="4" cy="4.25" r="0.8" fill="currentColor" stroke="none"/>
+                    <circle cx="4" cy="11.75" r="0.8" fill="currentColor" stroke="none"/>
+                    <line x1="7" y1="4.25" x2="11" y2="4.25" stroke-width="1"/>
+                    <line x1="7" y1="11.75" x2="11" y2="11.75" stroke-width="1"/>
+                </svg>
+                <span class="link-label">Features</span>
+            </a>
+            <a href="#how" class="topbar-item">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="8" cy="8" r="2.2" fill="currentColor" stroke="none"/>
+                    <line x1="2.5" y1="3.5" x2="6" y2="6.5"/><line x1="13.5" y1="3.5" x2="10" y2="6.5"/>
+                    <line x1="2.5" y1="12.5" x2="6" y2="9.5"/><line x1="13.5" y1="12.5" x2="10" y2="9.5"/>
+                    <circle cx="2.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="13.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="2.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="13.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
+                <span class="link-label">How it works</span>
+            </a>
+            <a href="#quickstart" class="topbar-item">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 8 7 12 13 4"/>
+                </svg>
+                <span class="link-label">Quick start</span>
+            </a>
+        </nav>
+        <div class="topbar-user">
+            <a href="https://github.com/getvaier/vaier" class="topbar-item" target="_blank" rel="noopener" title="GitHub">
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+                </svg>
+                <span class="link-label">GitHub</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="page-header" id="top">
+        <div class="page-title">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 7 7 10 12 4"/>
+                <path d="M2 12h12"/>
+            </svg>
+            VAIER / README
+        </div>
+        <div class="page-header-actions">
+            <a href="#quickstart" class="btn btn-primary">Quick start</a>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="hero-logo">
+            <svg width="84" height="84" viewBox="0 0 100 100" fill="none" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round">
+                <circle cx="50" cy="50" r="14" fill="#4fc3f7" stroke="none"/>
+                <line x1="16" y1="22" x2="38" y2="41"/>
+                <line x1="84" y1="22" x2="62" y2="41"/>
+                <line x1="16" y1="78" x2="38" y2="59"/>
+                <line x1="84" y1="78" x2="62" y2="59"/>
+                <circle cx="16" cy="22" r="9" fill="#4fc3f7" stroke="none"/>
+                <circle cx="84" cy="22" r="9" fill="#4fc3f7" stroke="none"/>
+                <circle cx="16" cy="78" r="9" fill="#4fc3f7" stroke="none"/>
+                <circle cx="84" cy="78" r="9" fill="#4fc3f7" stroke="none"/>
+            </svg>
+        </div>
+        <h1>Self-hosted infrastructure<br/>for <span class="accent">homelab developers</span>.</h1>
+        <p class="lede">
+            <strong>Vaier</strong> (Norwegian for <em>wire</em>, said <strong>VY-er</strong>) turns WireGuard, Traefik
+            and sign-in into one web UI. Publish any container on any machine as an HTTPS site in one click.
+        </p>
+        <div class="hero-actions">
+            <a href="#quickstart" class="btn btn-primary btn-large">Get started</a>
+            <a href="https://github.com/getvaier/vaier" class="btn btn-secondary btn-large" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <div class="hero-badges">
+            <span class="badge-meta"><span class="dot"></span>Apache 2.0</span>
+            <span class="badge-meta">Java 21 · Spring Boot</span>
+            <span class="badge-meta">Single Docker Compose</span>
+            <span class="badge-meta">No database</span>
+        </div>
+    </section>
+
+    <section id="why">
+        <div class="section-heading">
+            <span class="crumb">// the problem</span>
+            <h2>Tired of maintaining a VPN, a reverse proxy, and a wall of DNS records?</h2>
+        </div>
+        <div class="why">
+            <div class="why-card">
+                <div class="label">// without vaier</div>
+                <h3>Five tools, five config files, five places to mess up</h3>
+                <p>A VPN peer, a DNS record, a proxy route, a certificate and an auth rule — for every new service.</p>
+            </div>
+            <div class="why-card">
+                <div class="label">// with vaier</div>
+                <h3>One UI. One click. Zero DNS, ever again.</h3>
+                <p>Make one wildcard DNS record once. After that, pick a container, pick a name, and it's live with HTTPS.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="look">
+        <div class="section-heading">
+            <span class="crumb">// see it</span>
+            <h2>Your whole fleet, at a glance.</h2>
+        </div>
+        <div class="shots">
+            <figure class="shot">
+                <img src="img/topology.jpg" width="1431" height="805" loading="lazy"
+                     alt="Vaier's Topology view: two harbour villages joined to a lighthouse by tunnels, with pirate ships kept at sea">
+                <figcaption>Your sites, the tunnels between them, and the scanners being kept out.</figcaption>
+            </figure>
+            <div class="shots-pair">
+                <figure class="shot">
+                    <img src="img/fleet.jpg" width="1440" height="630" loading="lazy" alt="The fleet: every machine as a card">
+                    <figcaption>Every machine in one place.</figcaption>
+                </figure>
+                <figure class="shot">
+                    <img src="img/services.jpg" width="1180" height="716" loading="lazy" alt="Your services: every published service grouped by machine">
+                    <figcaption>Every service you publish, one click away.</figcaption>
+                </figure>
+            </div>
+        </div>
+    </section>
+
+    <section id="features">
+        <div class="section-heading">
+            <span class="crumb">// features</span>
+            <h2>Everything your homelab needs, in one stack.</h2>
+        </div>
+        <div class="features">
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M19 5l-4 4M5 19l4-4M19 19l-4-4"/>
+                </svg>
+                <h3>One-click publishing</h3>
+                <p>Any container on any machine becomes an HTTPS site in one click. Traefik routes it and Let's Encrypt signs it.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="12" rx="2"/>
+                    <path d="M8 20h8M12 16v4"/>
+                </svg>
+                <h3>A fleet over WireGuard</h3>
+                <p>Add a server with one setup link. Vaier finds its home network and lets the whole fleet reach it.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="7" y="2" width="10" height="20" rx="2"/>
+                    <path d="M11 18h2"/>
+                </svg>
+                <h3>Phones and laptops</h3>
+                <p>The Vaier app for Android and Windows joins with a four-digit code. No QR codes, no config files.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2 21c0-4 3-7 7-7s7 3 7 7"/>
+                    <circle cx="17" cy="6" r="2.5"/>
+                    <path d="M22 15c0-2.5-2-4.5-4.5-4.5"/>
+                </svg>
+                <h3>Sign-in and access</h3>
+                <p>Start with a first-run password, add Google or GitHub later. Choose who can open each service.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18M3 12h18M3 18h18"/>
+                    <circle cx="7" cy="6" r="1.3" fill="currentColor" stroke="none"/>
+                    <circle cx="7" cy="12" r="1.3" fill="currentColor" stroke="none"/>
+                    <circle cx="7" cy="18" r="1.3" fill="currentColor" stroke="none"/>
+                </svg>
+                <h3>Explorer</h3>
+                <p>Files, containers, disks and backups across every machine, in one place. It opens on what needs you.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h11l5 5v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+                    <path d="M8 20v-6h8v6M8 4v4h6"/>
+                </svg>
+                <h3>Backups</h3>
+                <p>Tick what matters and press Back up. Archives stay readable even if Vaier is gone.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <path d="m3 7 9 7 9-7"/>
+                </svg>
+                <h3>Alerts that mean something</h3>
+                <p>Disks forecast days ahead, containers that didn't come back, updates waiting. Mail only when something is wrong.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6Z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+                <h3>Threats you can see</h3>
+                <p>CrowdSec blocks scanners at the edge, and Vaier tells you who and why, in plain words.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="m6 9 3 3-3 3"/>
+                    <line x1="13" y1="15" x2="17" y2="15"/>
+                </svg>
+                <h3>Web terminal</h3>
+                <p>A persistent SSH shell to any machine, in your browser. Keys never leave the server.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16v11H9l-4 4v-4H4z"/>
+                    <path d="M10.4 9.2c0-1.1.9-1.9 2-1.9s2 .8 2 1.8c0 1.5-2 1.6-2 2.9M12.4 14.4v.1"/>
+                </svg>
+                <h3>Ask Marvin</h3>
+                <p>Ask your fleet questions in plain words. Marvin can suggest an action, but only your click runs it.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <h3>Your services</h3>
+                <p>One page linking every service you publish, with direct links when you're at home.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <path d="m10 17 5-5-5-5"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                <h3>Claude Code on every machine</h3>
+                <p>Sign each machine's Claude Code in to your own account from Vaier's terminal.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how">
+        <div class="section-heading">
+            <span class="crumb">// how it fits together</span>
+            <h2>One server. WireGuard out to your peers. HTTPS in from the world.</h2>
+        </div>
+        <div class="diagram-wrap">
+            <svg viewBox="0 0 760 280" width="760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram">
+                <defs>
+                    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                        <path d="M0 0 L10 5 L0 10 Z" fill="#4fc3f7"/>
+                    </marker>
+                </defs>
+
+                <g transform="translate(20,110)">
+                    <rect width="120" height="60" rx="4" fill="#2d2d30" stroke="#3c3c3c"/>
+                    <text x="60" y="28" text-anchor="middle" fill="#d4d4d4" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600">User browser</text>
+                    <text x="60" y="46" text-anchor="middle" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">on the internet</text>
+                </g>
+
+                <g transform="translate(220,110)">
+                    <rect width="220" height="60" rx="4" fill="#2d2d30" stroke="#4fc3f7" stroke-width="1.5"/>
+                    <text x="110" y="26" text-anchor="middle" fill="#4fc3f7" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600">Vaier server</text>
+                    <text x="110" y="44" text-anchor="middle" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">Traefik · CrowdSec · oauth2-proxy · WireGuard · Pi-hole</text>
+                </g>
+
+                <g transform="translate(540,40)">
+                    <rect width="200" height="60" rx="4" fill="#2d2d30" stroke="#3c3c3c"/>
+                    <text x="100" y="26" text-anchor="middle" fill="#d4d4d4" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600">Peer 1</text>
+                    <text x="100" y="44" text-anchor="middle" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">docker container :8080</text>
+                </g>
+
+                <g transform="translate(540,120)">
+                    <rect width="200" height="60" rx="4" fill="#2d2d30" stroke="#3c3c3c"/>
+                    <text x="100" y="26" text-anchor="middle" fill="#d4d4d4" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600">Peer 2</text>
+                    <text x="100" y="44" text-anchor="middle" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">docker container :3000</text>
+                </g>
+
+                <g transform="translate(540,200)">
+                    <rect width="200" height="60" rx="4" fill="#2d2d30" stroke="#3c3c3c"/>
+                    <text x="100" y="26" text-anchor="middle" fill="#d4d4d4" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600">Peer 3</text>
+                    <text x="100" y="44" text-anchor="middle" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">phone · laptop · NAS</text>
+                </g>
+
+                <path d="M140 140 L 215 140" fill="none" stroke="#4fc3f7" stroke-width="1.4" marker-end="url(#arr)"/>
+                <text x="155" y="134" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">HTTPS</text>
+
+                <path d="M440 130 L 535 70" fill="none" stroke="#4fc3f7" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+                <path d="M440 140 L 535 150" fill="none" stroke="#4fc3f7" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+                <path d="M440 150 L 535 230" fill="none" stroke="#4fc3f7" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+                <text x="450" y="106" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">WireGuard tunnel</text>
+            </svg>
+            <p class="diagram-caption">
+                Traffic arrives at the Vaier server, passes sign-in if the service asks for it, and travels the
+                tunnel to the container. Your machines never need a public IP.
+            </p>
+        </div>
+    </section>
+
+    <section id="quickstart">
+        <div class="section-heading">
+            <span class="crumb">// quick start</span>
+            <h2>From bare server to first HTTPS service in one command.</h2>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">01</div>
+                <div class="step-body">
+                    <h3>Bring a Linux server with a public IP</h3>
+                    <p>Open TCP 22, 80, 443 and UDP 51820, and bring a domain.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">02</div>
+                <div class="step-body">
+                    <h3>Run the installer</h3>
+                    <p>It asks three questions: domain, email and time zone. It can install Docker for you if needed.</p>
+<pre class="code"><span class="cmd">mkdir</span> -p vaier &amp;&amp; <span class="cmd">cd</span> vaier
+<span class="cmd">curl</span> -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | <span class="cmd">bash</span></pre>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">03</div>
+                <div class="step-body">
+                    <h3>Make the one DNS record it gives you</h3>
+                    <p>One wildcard record covers every service you will ever publish. The installer prints it for you.</p>
+<pre class="code"><span class="comment"># *.yourdomain.com   A   &lt;this server's public IP&gt;</span></pre>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">04</div>
+                <div class="step-body">
+                    <h3>Say yes, and sign in</h3>
+                    <p>The installer prints your first-run password. The first person to sign in becomes the admin. To update later, run the same command again.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="who">
+        <div class="section-heading">
+            <span class="crumb">// who it's for</span>
+            <h2>Built for the self-hosted community.</h2>
+        </div>
+        <div class="why">
+            <div class="why-card">
+                <div class="label">// the homelabber</div>
+                <h3>One person. One server. A growing pile of containers.</h3>
+                <p>Stop hand-editing proxy configs every time you add Plex or another app.</p>
+            </div>
+            <div class="why-card">
+                <div class="label">// the small team</div>
+                <h3>A handful of users, real auth, real DNS.</h3>
+                <p>Let people in with Google or GitHub, and no one has to ask for a password.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-inner">
+            <a href="#top" class="footer-brand">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <circle cx="8" cy="8" r="2.2" fill="currentColor" stroke="none"/>
+                    <line x1="2.5" y1="3.5" x2="6" y2="6.5"/><line x1="13.5" y1="3.5" x2="10" y2="6.5"/>
+                    <line x1="2.5" y1="12.5" x2="6" y2="9.5"/><line x1="13.5" y1="12.5" x2="10" y2="9.5"/>
+                    <circle cx="2.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="13.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="2.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <circle cx="13.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
+                V<span class="brand-ai">ai</span>er
+            </a>
+            <div class="footer-links">
+                <a href="https://github.com/getvaier/vaier">Source</a>
+                <a href="https://github.com/getvaier/vaier/issues">Issues</a>
+                <a href="https://hub.docker.com/r/getvaier/vaier">Docker Hub</a>
+                <a href="https://github.com/getvaier/vaier/blob/main/LICENSE">License</a>
+            </div>
+            <div>Apache 2.0 · Built for the self-hosted community.</div>
+        </div>
+    </footer>
+</body>
+</html>
