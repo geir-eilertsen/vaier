@@ -132,7 +132,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=${VAIER_TZ:-UTC}
+      - TZ=Europe/Oslo
       - SERVERURL=vaier.${VAIER_DOMAIN}
       - SERVERPORT=51820
       - PEERS=0
@@ -175,17 +175,6 @@ services:
           # PostUp's `-o eth+`, which is a no-op when the NIC isn't named eth*. #248.
           iptables -t nat -C POSTROUTING ! -o wg0 -j MASQUERADE 2>/dev/null || \
             iptables -t nat -A POSTROUTING ! -o wg0 -j MASQUERADE
-          # VPN -> the stack's own bridge: a peer reaches Pi-hole and Traefik (incl. the tunnel door) only.
-          # Vaier, docker-proxy and Traefik's API trust the bridge and carry no auth of their own.
-          if iptables -N VAIER-TUNNEL 2>/dev/null; then
-            iptables -A VAIER-TUNNEL -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-            iptables -A VAIER-TUNNEL -d 172.20.0.53 -p udp --dport 53 -j ACCEPT
-            iptables -A VAIER-TUNNEL -d 172.20.0.53 -p tcp --dport 53 -j ACCEPT
-            iptables -A VAIER-TUNNEL -d 172.20.0.251 -p tcp -m multiport --dports 80,443,8090 -j ACCEPT
-            iptables -A VAIER-TUNNEL -j DROP
-          fi
-          iptables -C FORWARD -i wg0 -d 172.20.0.0/16 -j VAIER-TUNNEL 2>/dev/null || \
-            iptables -I FORWARD 1 -i wg0 -d 172.20.0.0/16 -j VAIER-TUNNEL
           sleep 10
         done
         exit 1
@@ -487,15 +476,6 @@ services:
       # parsers (geoip-enrich, the private-IP whitelist, ...); mounting the whole directory would
       # shadow all of them. Vaier's SecurityService writes this file; vaier-init pre-touches it.
       - ./crowdsec/whitelist/vaier-trusted-networks.yaml:/etc/crowdsec/parsers/s02-enrich/vaier-trusted-networks.yaml:ro
-      # Escalating-ban policy: a single-file mount over the image's default profiles.yaml, same
-      # reasoning as the whitelist above — the full /etc/crowdsec dir mount still carries every hub
-      # parser and scenario; this replaces only the one file that decides ban DURATION. The image
-      # default bans a source for a flat 4h; this makes each successive ban on the same source
-      # longer (4h, 8h, 12h, ...). vaier-init renders it before crowdsec boots (crowdsec depends_on
-      # it); RO so the image's first-boot config copy never clobbers it. WHERE a ban is enforced is
-      # unchanged — Traefik's plugin still exempts the recovery doors (#351), so a longer ban can
-      # never lock the operator out of the console that lifts it.
-      - ./crowdsec/profiles/vaier-profiles.yaml:/etc/crowdsec/profiles.yaml:ro
       - ./traefik/logs:/var/log/traefik:ro
     depends_on:
       vaier-init:
@@ -510,7 +490,6 @@ services:
   pihole:
     image: pihole/pihole:2026.09.0
     container_name: pihole
-    mem_limit: 128m
     environment:
       TZ: ${VAIER_TZ:-UTC}
       # Queries arrive from the tunnel, which is not Pi-hole's "local" network.
@@ -618,9 +597,7 @@ services:
         URL=https://download.db-ip.com/free/dbip-city-lite-$$MONTH.mmdb.gz
         echo "Downloading $$URL"
         if ! wget -q -O /tmp/db.mmdb.gz "$$URL"; then
-          # busybox date has no "-1 day"; step the month back by hand.
-          Y=$$(date +%Y); M=$$(date +%m); M=$${M#0}
-          if [ "$$M" -eq 1 ]; then PREV="$$((Y - 1))-12"; else PREV="$$Y-$$(printf %02d $$((M - 1)))"; fi
+          PREV=$$(date -d "$$MONTH-01 -1 day" +%Y-%m 2>/dev/null || date +%Y-%m)
           echo "Current month not published, falling back to $$PREV"
           wget -q -O /tmp/db.mmdb.gz "https://download.db-ip.com/free/dbip-city-lite-$$PREV.mmdb.gz" || {
             echo "WARN: could not download geolocation DB; peer map will be empty"
@@ -656,40 +633,12 @@ services:
         mkdir -p /crowdsec-whitelist
         touch /crowdsec-whitelist/vaier-trusted-networks.yaml
         chown -R 1000:1000 /crowdsec-whitelist
-        # Escalating repeat-offender bans. Rendered here so the committed docker-compose.yml is the
-        # one source of truth (crowdsec/profiles/ is gitignored, like traefik/). Single-file-mounted
-        # RO into crowdsec at /etc/crowdsec/profiles.yaml. duration_expr is first-class on crowdsec
-        # 1.7 (no feature flag); GetDecisionsCount counts prior decisions for the same source, so the
-        # ban grows 4h -> 8h -> 12h with each repeat. on_success: break keeps the first matching
-        # profile's decision, exactly as the image default did.
-        mkdir -p /crowdsec-profiles
-        cat > /crowdsec-profiles/vaier-profiles.yaml <<'VAIER_BAN_PROFILES'
-        name: default_ip_remediation
-        filters:
-         - Alert.Remediation == true && Alert.GetScope() == "Ip"
-        decisions:
-         - type: ban
-           duration: 4h
-        duration_expr: Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4)
-        on_success: break
-        ---
-        name: default_range_remediation
-        filters:
-         - Alert.Remediation == true && Alert.GetScope() == "Range"
-        decisions:
-         - type: ban
-           duration: 4h
-        duration_expr: Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4)
-        on_success: break
-        VAIER_BAN_PROFILES
-        chown -R 1000:1000 /crowdsec-profiles
     volumes:
       - ./vaier/config:/vaier/config
       - ./traefik/config:/traefik/config
       - ./wireguard/config:/wireguard/config
       - ./icons:/icons
       - ./crowdsec/whitelist:/crowdsec-whitelist
-      - ./crowdsec/profiles:/crowdsec-profiles
     restart: "no"
 
   vaier:

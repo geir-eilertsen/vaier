@@ -2,113 +2,141 @@
 
 Back to [README](../README.md).
 
-What Vaier watches, when it mails you, and what you can do about it. Outside these cases it stays quiet.
-
-![A machine's Storage page: each disk's fill, with its own alert level](vaier-storage.jpg)
+Disk-pressure watching and its early-warning forecast, the machines that have lost their way out to the internet, the containers that were running and are in trouble now, container image drift detection, what the edge blocks, and the email notifications that tie them together.
 
 ---
 
 ## Email notifications
 
-Admins are mailed (Settings → *Mail*) when:
+SMTP-powered admin alerts when any server-type machine (VPN server peers and LAN servers) goes up or down, when a filesystem on any SSH-reachable machine behind the VPN — including the Vaier host itself — fills past its threshold, when a machine turns out to have [no default route](#a-machine-with-no-way-out), when a container that was running [stops, turns unhealthy or starts restart-looping](#a-container-that-was-running-and-is-not), when a container's image newly has an **update available**, when someone signs in for the first time and lands as a pending access request awaiting approval, or when the [edge's CrowdSec bouncer](NETWORKING.md#edge-hardening) blocks either a **credential attack** or one of your **own networks**.
 
-- a server-type machine goes up or down
-- a filesystem fills past its threshold
-- a machine has [no default route](#a-machine-with-no-way-out)
-- a container that was running [stops, turns unhealthy or restart-loops](#a-container-that-was-running-and-is-not)
-- an image newly has an **update available**
-- a first sign-in lands as a pending access request
-- the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
+It will *not* mail you about the routine bans, and that is deliberate — see [What the edge blocks](#what-the-edge-blocks) below.
 
-Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) sends no up/down or backup mail, and its nightly backup is skipped.
-
-### Sending through Gmail
-
-1. Turn on **2-Step Verification** for the Google account, at myaccount.google.com/security. Google offers app passwords only once it is on.
-2. Create an **app password** at myaccount.google.com/apppasswords (name it "Vaier") and copy the 16 letters it shows. A Google Workspace admin may have switched app passwords off for the domain.
-3. In Vaier, **Settings → Mail → Change**:
-
-   | Field | Value |
-   |---|---|
-   | Host | `smtp.gmail.com` |
-   | Port | `587` (Vaier uses STARTTLS; 465 will not work) |
-   | Username | your full Gmail address |
-   | Password | the app password, spaces or not — never your Google password |
-   | Sender | the same Gmail address (Gmail replaces any other) |
-
-4. Type your address as the test recipient and press **Send test email**. A failed test says why; `535` means the username or app password is wrong.
+Nor about a machine you said is [switched off on purpose](EXPLORER.md#switched-off-on-purpose): its going down and its coming back are both expected, so neither the up/down mail, the backup-server-down mail nor a backup-failure mail is sent for it — its nightly backup is simply skipped. The first time Vaier reaches it again the mark clears itself, silently, and every alert applies as before.
 
 ---
 
 ## Host disk monitoring
 
-Every five minutes Vaier runs `df` over SSH on every machine it holds a **host credential** for, the Vaier host included (store a credential for it like any other machine). Every real filesystem is watched, not just `/`. An unreachable host is skipped, never mistaken for a full disk.
+Vaier watches disk usage on every SSH-capable machine it holds a credential for — every machine behind the VPN, and the Vaier host itself, watched over SSH-to-self exactly like any other machine — running `df` over SSH on a periodic cadence and emailing every admin user when a **filesystem** fills past its threshold. A **recovery** email follows once it has drained clear of that threshold again, and Vaier never re-mails on every poll, so a filesystem hovering either side of the line won't spam you.
 
-- **The first sighting counts.** A filesystem already over its threshold is alerted on at once.
-- **One mail per band.** Bands are 80, 85, 90, 95, 100. 86% → 89% is silence; 89% → 91% is a mail.
-- **Recovery needs a margin** of five points below the threshold, so a disk wobbling around the line doesn't mail you daily.
-- Mails carry size: *"[Vaier] NAS /volume1 is at 91% full (10.8 TiB, 1.0 TiB free)"*.
+**The first sighting counts.** A filesystem that is *already* over its threshold the first time Vaier ever looks at it is alerted on immediately — there is no silent baseline observation. That baseline was a real bug: the Vaier host's own root filesystem sat at 89% against an 80% threshold and never sent a single mail, because the alert state lived only in memory and every redeploy made the next sweep look like a first sighting again. The state now lives in `vaier/config/disk-pressure.yml` and survives restarts and updates, so "first ever" means first ever.
 
-**Threshold** — default **85%**, under Settings → *Disk alerts*. From a machine's **disk** entry in the **Explorer**, give a filesystem its own threshold or **mute** it.
+**Escalation happens in bands, not on a timer.** A filesystem in pressure goes on filling, and one mail at 86% is no use if it ends at 99%. So Vaier speaks again when the disk gets *materially* worse: pressure is graded in five-point **bands** — 80, 85, 90, 95, 100 — and you get one mail per band. 86% → 89% is silence; 89% → 91% is an email. It deliberately never re-sends "still full" every few hours: that pages you about the clock rather than about the disk. Sliding back down a band while still over the threshold is not a reset either, so a disk wobbling either side of a band edge won't page you on each wobble.
 
-Each machine's card in the **Explorer** shows its worst watched filesystem: green, amber closing on its threshold, red over it. An unread machine shows **no mark at all**.
+**Coming back under the line isn't a recovery either.** A filesystem is declared recovered only once it has drained a **recovery margin** of five points clear of its threshold — 75% against an 80% threshold, not 79%. The same reasoning as the bands, applied to the way down, and the wobble it catches is one Vaier's own host does daily: a Docker build takes ~1.2 GiB and pushes `/` over its threshold, the nightly prune gives it back, and without the margin that was an alert *and* a recovery mail every day about a disk that never changed state. In between the margin and the threshold the filesystem stays in pressure, silently — and crossing back up raises nothing new.
+
+Both silences are logged, so a quiet disk is never indistinguishable from one nobody is watching: `… is at 89% — above its 85% threshold, already notified at band 85%; staying quiet` while it's over the line, and `… is at 82% — under its 85% threshold but not by the 5-point recovery margin, still in pressure at band 85%; staying quiet` while it's waiting to clear.
+
+**Every filesystem, not just the root one.** A machine's disks are read whole: `df` reports each mounted filesystem and Vaier watches all of them. This matters more than it sounds — on a Synology NAS, `/` is a fixed-size ~2 GB DSM system partition that is 88% full by design and never moves, while `/volume1` is the 12 TB volume holding every backup. Watching only `/` means watching the one filesystem that can never tell you anything, while the one that matters fills to 100% in silence. Kernel and in-memory mounts (tmpfs, proc, sysfs, cgroup, squashfs, overlay…) and the bind-mount aliases a Docker storage driver leaves behind are skipped — they aren't disks, and reporting a volume nine times would let it raise nine alerts.
+
+**Readings carry size, not just a percentage.** Alerts read *"[Vaier] NAS /volume1 is at 91% full (10.8 TiB, 1.0 TiB free)"* — the mount, the size and the free space, in the same binary units `df -h` prints. "NAS is at 88%" was a number nobody could act on.
+
+This reuses the same SMTP configuration as the up/down machine alerts (Settings → *Mail*), so it needs no extra mail setup. With SMTP unconfigured, monitoring is silent.
+
+**Threshold** — the alert fires when usage rises above the configured percentage (default **85%**), and clears five points below it. Adjust it under Settings → *Disk alerts*; valid range is 1–99. This is the **fleet-wide fallback**: it governs every filesystem that hasn't been given one of its own.
+
+**Watching and muting a filesystem** — no single rule fits a whole fleet, so each filesystem on each machine carries its own **watch**, set from its machine's **disk** entry in the **Explorer**: leave it watched at the fleet-wide threshold, give it a threshold of its own (`/` on the NAS is fine at 95%), or **mute** it entirely (a system partition that's near-full by design). The default is **watched, at the fleet-wide threshold** — nothing is ever silently unwatched, so a new volume that appears on a machine nags rather than hides, and muting is always something you chose. Only your exceptions are stored (in `vaier/config/disk-watches.yml`); no file means every filesystem is watched at the fleet-wide threshold. The Explorer and the alert email ask the same question of the same code, so they can never disagree about whether a disk is in trouble.
+
+**Seen without going looking** — every machine's card in the **Explorer**'s fleet listing carries its worst watched filesystem as a tinted disk mark: the same reading and the same verdict as the email, taken on the rounds Vaier already makes, so nothing is asked of a sleeping machine to draw it. Green when there's room, amber when the worst filesystem is closing on its threshold, red when one is over it, with the percentage shown only when there's something to see and the filesystem, its fullness and its threshold named on hover. A machine Vaier hasn't read yet draws **no mark at all** — an unread disk is not a disk with room on it. Every reading refreshes the mark, the sweep's and the one taken when you open a machine's disk list alike, so muting a filesystem or changing its threshold lands on the card immediately instead of waiting out the sweep.
+
+**One trip, more than one answer.** These rounds are also where Vaier learns whether it can reach a machine's SSH server at all, what network the machine sits on, whether that machine [has a way out to the internet](#a-machine-with-no-way-out), when it last booted, and whether the user it signs in as can drive that machine's Docker (which decides whether an **Update** is offered — see above). All of it rides on the same five-minute sign-in the `df` needs, so knowing more costs no extra connection to any machine.
+
+**Requirements** — a machine is watched only once it has a stored **host credential** (the same vault the web terminal uses) and SSH access enabled. A host that's unreachable or whose `df` fails is quietly skipped — never mistaken for a full disk. Machines without a stored credential or with SSH access turned off are left alone, so there's no failed-auth noise. To have the Vaier host itself watched, store a host credential for it just like any other machine.
 
 ### Disk-fill forecast (early warning)
 
-Vaier tracks each filesystem's fill rate and mails once when it is projected to reach **its own alert threshold** within **seven days** — *"projected to reach its 80% threshold in ~5 days"*. It needs three days of history first. Once the disk crosses its threshold the level alert takes over; the two never speak at once. An all-clear follows only if it drains or slows well clear of the horizon. Muted filesystems are never forecast.
+Beyond the level threshold above, Vaier keeps each *filesystem's* **disk-fill trend** — about a week of free-space readings, one an hour — fits a line through it and projects the **runway**: the time until it reaches **its own alert threshold** at the rate it is actually filling. When the runway drops under a fixed **seven-day horizon** *while the filesystem is still below that threshold*, admins get a one-time early-warning email naming the machine, the mount point, its current usage, the threshold it's heading for, the fill rate (`1.2 GiB/day`) and the projected runway — *"projected to reach its 80% threshold in ~5 days"*.
+
+**To the threshold, not to full.** The runway counts down to the line Vaier will actually act on, and that is the only thing that makes the alarm reachable. Measured to 100%, a disk creeping up ~0.9%/day only got inside a seven-day runway once it was already past 93% — and by then it is far above any sane threshold, where the level alarm has taken over and the forecast is deliberately silent. The warning could never fire. To the threshold, the same disk is mailed about in its low seventies with a week still to act in. It also makes the hand-off exact: the forecast warns *while below* the threshold *about crossing* it, and the level alarm takes over at the moment the forecast predicted.
+
+**Free space, not the percentage.** `df` reports usage as a whole number, so a disk creeping up ~1%/day shows the *same integer* all day. A trend fitted to that column is either flat — no warning, ever — or, on the reading that happens to tick over, wildly overstated. Vaier follows the free blocks instead, which have no such floor.
+
+**It survives your builds.** A machine that builds images gains and loses gigabytes on a daily rhythm, and a short window reads the build as a disk about to fill. Vaier needs at least three days of history and fits over whole days, so a daily cycle cancels out instead of tilting the line — and it projects from the fitted trend, not the dip a build happens to be in when the sweep lands. The first forecast for a filesystem therefore arrives a few days after Vaier first sees it, which is the point: there is nothing honest to say before then.
+
+It's a trend alarm ("this filesystem *will be* full"), distinct from the level alarm above ("this filesystem *is* full"): a filling filesystem pages once as a forecast and then, when it crosses the threshold, the disk-pressure alert takes over — never both at once. An all-clear follows on a *genuine recovery* — it drains, or its fill slows so far that the projected runway rises well clear of the horizon, all while still below the threshold. A runway merely grazing back over the line is not a recovery and raises nothing, so a disk sitting near the horizon isn't cleared and re-warned every few days. The hand-off case (it simply climbs past the threshold) raises **no** all-clear: the disk-pressure alert already speaks for it, so you're never sent a contradictory "cleared" and "is full" at the same poll. A flat or draining filesystem has no forecast, a muted one is never forecast at all, and a failed `df` records no sample, so a transient blip can't fabricate a warning.
 
 ---
 
 ## A machine with no way out
 
-A machine that has lost its default route still serves local traffic and passes every other check, but cannot reach the internet — so a [container update](#update-available) there fails.
+A LAN server here lost its default route and Vaier called it perfectly healthy for as long as nobody looked. It was right to, given what it was asking: it reaches a LAN server *through that server's relay peer*, which is same-subnet traffic; the disk read came back over the same path; and the backup server sits on the same LAN, so the backups kept succeeding. Every probe passed. The machine could not pull an image, reach an API, or talk to anything outside the house at all, and it was found by a human whose own tooling on the box could not connect.
 
-The five-minute rounds read each machine's **default-route standing**: **present**, **absent** (the fault), or **unknown**. **Unknown is not "no"**, and shows nothing.
+That is a blind spot rather than an oversight — **everything else Vaier asks a machine is answerable from inside that machine's network** — and it is the blind spot most likely to bite, because a machine with no egress keeps serving local traffic and looks entirely normal. It also breaks something Vaier itself offers: the [container update](#update-available) pulls an image, and on a machine in this state it fails with nothing useful to say.
 
-When the route is absent, the machine's pane shows a "No default route" card under *What to do next*. It has no button: **Vaier can see this but cannot fix it**. You get one mail when the route goes and one when it comes back.
+So the five-minute rounds now read the machine's **default-route standing**. No new connection and no new command: the `ip` reading that already offers to [route a relay's LAN](NETWORKING.md) carries the routing table's `default` line, and until now that half was parsed and thrown away. Three answers, never two:
+
+- **present** — the machine named the interface its default route leaves by. Any interface counts: a full-tunnel peer routing by `wg0` reaches the world perfectly well.
+- **absent** — the machine answered, and named no default route at all. This is the fault.
+- **unknown** — Vaier has never managed to read this machine, or the last read told it nothing. **Unknown is not "no."** A machine nobody has asked never wears a fault it was never observed to have.
+
+**What you see.** The machine's pane gains a card under *What to do next* — "No default route", with the interfaces and addresses Vaier actually read as the evidence, and a plain sentence saying the machine cannot reach the internet, that image pulls and updates will fail, and that **Vaier can see this but cannot fix it**: the route has to come back on the machine. It is the only card there with no button, because a button would promise an action that does not exist. A machine with a route, or one Vaier has not read, shows nothing and reserves no space.
+
+**What you're mailed.** One email when the route goes, one when it comes back, and nothing in between — no "still broken" on a timer. The **first** observation speaks: a machine that had already lost its route before Vaier started is the normal case, not the exception, so treating a first sighting as a silent baseline would mean never reporting it. That is only safe because the latch is persisted, in `vaier/config/missing-default-routes.yml`, exactly like the disk one and for the same reason — the operator deploys several times a day, and a latch in memory would either re-mail on every deploy or go quiet forever. A sweep that *fails* moves nothing in either direction: it can't raise the alert, and — the half that matters more — it can't send the all-clear for a machine that is still broken.
+
+**What it does not do.** Vaier does not try to fix the route, and does not test real egress by reaching out from the machine. The routing table is unambiguous, costs no traffic, and asks nothing of a sleeping machine; the observed fault had a DHCP lease that *did* supply a router, with `systemd-networkd` installing host routes via that gateway while never installing the default route itself — so the configuration was not wrong and a config audit would not have caught it. Reading the live routing table is what finds this class of fault.
 
 ---
 
 ## A container that was running and is not
 
-Vaier scrapes every machine's containers every 30 seconds. It speaks only about a container it has seen running well — containers stopped on purpose stay quiet. Stopped containers are listed reading **DOWN**.
+A machine here rebooted. The containers with a restart policy came back; one with `restart: no` did not. Vaier reported that machine green on every axis it watched — reachable, disk fine, backups green — because every one of those things was true. The service was simply gone, and it was noticed by a person trying to use it.
 
-Three kinds of trouble, worst first:
+Vaier already knew. It scrapes every machine's containers every 30 seconds for the Explorer's container lists, so it had watched that container run and could see it stopped. Nothing acted on the difference.
 
-- **gone** — stopped or removed
-- **restart-looping** — the only warning you get for a container that dies on start-up under `restart: always`
-- **unhealthy** — up, but failing its own health check
+**Stopped containers had to become visible first.** Docker reports no port mappings at all for a container that is not running, and the scrape kept only containers that had some — so every exited container silently dropped out of every machine's list. Vaier now reads a stopped container's own published bindings (what it *was* published on, which survives the stop — not the image's `EXPOSE` list, which would invent ports nobody ever published), so a stopped container is listed where it always should have been, reading **DOWN**. That is also what lets Vaier tell a container that is *stopped* from one that has been *removed*. A stopped container is never offered as a **+ Publish** candidate and is never an update target: nothing answers on its port.
 
-Trouble must show on two consecutive scrapes, so an **Update** or a restart doesn't alert. A machine that didn't answer moves nothing.
+**The trigger is "was up, now isn't"** — never "a container is stopped". Plenty of containers are stopped on purpose and forever: one-shot init containers, a stack you retired last year. Vaier only ever remembers a container it has actually seen running, and says nothing at all about the rest. **Exit code is not the filter either.** The container that prompted this exited `255` with `OOMKilled: false`, an empty `Error` and a clean shutdown in its log — that was a JVM being stopped, not a crash, and a rule keyed on "non-zero exit" would have called it one and been wrong.
 
-**What you see.** The container list says **gone**, **unhealthy** or **restart-looping**, and the machine's pane gets a card under *What to do next* saying when it was last well. It has **no button**: Vaier cannot start or restart containers.
+**Two scrapes, not one.** A container has to be found not running on two consecutive answered scrapes before anything is said. One is a Vaier-driven **Update** recreating it, or a restart in progress, and an alert that fires on those is an alert people learn to ignore.
 
-**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Apalveien 5*), one when it is running well again; getting worse earns a new mail. A removed container earns one mail and is forgotten. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
+**A machine that did not answer moves nothing.** The scrape already knows whether it reached a machine's Docker daemon, and a machine that is merely asleep must never mail you about every container on it. On Vaier's own host an empty reading counts as no answer too — Vaier itself runs in a container there, so "no containers" can only mean the local scrape failed.
+
+**Gone is not the only trouble, and it is not the earliest.** The same listing says two more things Vaier was throwing away. A container's own health check writes its verdict into the status line Docker already returns — `Up 3 minutes (unhealthy)` — so a container that is up while the thing inside it is broken reads **unhealthy**, off the scrape that was already running and with nothing inspected to learn it. And a container Docker reports as `restarting` is in a restart loop: it starts, exits, and is started again. That is the predictive one the issue asked for — a container on `restart: always` that dies on start-up never becomes "gone" at all, because Docker keeps bringing it back, so this is the only word you would ever get about it.
+
+**The same two scrapes, and the same silence.** Each trouble has to be read twice in a row before it is said, and each has its own count: one unhealthy scrape followed by one restarting scrape is not two misses of anything. `health: starting` — the minute after a container comes up — is never counted either way, because it is a verdict Vaier has not taken yet; counting it would turn every restart into half an alert. A container Vaier has never watched run *well* still raises nothing, ever, so a container that has only ever been unhealthy is as quiet as one that has only ever been stopped. When more than one could be said at once, the worst wins: gone, then restart-looping, then unhealthy.
+
+**Worse news is news; better news waits for the all-clear.** A container that was mailed about as unhealthy and then exits has got worse, and that earns its own mail. One that was gone and comes back up unwell has got better — the card and the badge say **unhealthy** straight away, and your inbox hears nothing until it is properly well, and then hears it once. Without that rule the two would trade mails back and forth across one bad afternoon.
+
+**What you see.** A container Vaier watched run and now finds in trouble reads **gone**, **unhealthy** or **restart-looping** in the machine's container list, rather than the `exited` that a deliberately stopped container shows too — or, for the other two, the plain `running` that Docker calls a container whose health check is failing. A container that is up and unwell wears the same amber the shell uses everywhere for "it is there, and something about it is wrong"; red stays for the one that is not running at all. Its Inspector says both words on one line — `running (unhealthy)` — so the list and the pane can never disagree. The machine's pane gains a card under *What to do next* per troubled container, with what Vaier saw as the evidence — when it was last well, and when the trouble started. Like the missing-route card it has **no button**: Vaier reads the fleet's containers over the Docker API and has no endpoint that starts, stops or restarts one, so the card says so instead of offering something that would fail.
+
+**What you're mailed.** One email when a container falls into trouble, naming which trouble it is — *webtrees is unhealthy on Apalveien 5* — one when it is running well again, and nothing in between. A container that is *removed* rather than stopped earns the same single mail and is then forgotten entirely, so tearing down a stack you meant to tear down costs one message and leaves no card behind. The memory lives in `vaier/config/container-standings.yml`, persisted for the same reason the disk latch is: the operator deploys several times a day, and a container that stopped during a deploy would otherwise look like one Vaier had never seen run.
+
+**Times are in your zone.** Every instant in the mail and on the card is written in the Vaier server's own time zone, named in full — "2026-09-11 11:47 (Europe/Oslo)" — so nothing asks you to convert from UTC while working out whether a service has been down since before breakfast. The stored values stay UTC instants; only the words move.
+
+**And why it happened.** Only where it explains something: a reboot explains a container that did not come back, and says nothing about one that is up and failing its own health check, so the sentence appears on the gone mail alone. The five-minute rounds read each machine's boot time — one more line in front of the `df` they already run, so it costs no extra connection. When a machine booted *after* Vaier last saw a container running, the mail and the card both say so: *the machine rebooted at 09:40, after Vaier last saw this container running — that is what explains it*. When Vaier has never managed to read a boot time, the sentence is simply absent rather than guessed at.
 
 ---
 
 ## Update available
 
-Once a day Vaier compares each container's image digest with what its registry serves for the **same tag**. Any Registry v2 host works, no account needed. **The sweep never pulls and never restarts anything.**
+Vaier tells you when **one of your** containers runs an image its registry has since moved on from. Once a day it compares the digest the running container's image actually has against the digest that registry serves for the **very same tag** — a difference means an **update available**. Any Registry v2 host works: `ghcr.io` and `lscr.io` alongside Docker Hub, with no account, token or config to supply. **The daily sweep never pulls and never restarts anything** — detection is read-only, and Vaier only acts when you tell it to (see **Update**, below).
 
-- **Vaier's own stack is not watched** — it updates with Vaier; see [Updating Vaier itself](#updating-vaier-itself).
-- **One rollup mail** when images newly go out of date, naming image and machine (`vaultwarden/server:latest on Apalveien 5`).
-- A **moving tag** (rebuilt daily, like `netdata/netdata:latest`) keeps its mark, labelled `moving`, but is never mailed.
-- A registry Vaier can't read, a locally built image or a digest-pinned one reads **unknown** and shows no mark — so no mark is not a promise the image is current.
+**Vaier's own stack is not watched at all** — not Traefik, not WireGuard, not Vaier itself. Those images are pinned by a Vaier release and move with one, so a mark on them is an alert whose only resolution is *wait for a Vaier release*, and an alert you can't act on teaches you to filter the channel. They're dropped before the registries are asked, so they don't spend the rate limit either. Vaier's own version is **Settings → Update**'s business, and it asks for itself.
 
-Out-of-date containers wear a small yellow mark in the **Explorer**. Only the Vaier server's and **server peers**' containers are covered; LAN servers read as unknown for now. **Check the registries now**, in a machine's container list, re-checks straight away.
+**A tag that moves on its own gets the mark and no mail.** `netdata/netdata:latest` is Docker Hub's `:edge` — rebuilt every night — so the sweep truthfully found it out of date every single morning, and the mail came every single morning too. A tag Vaier has watched move to a new digest twice running, each change within about a day and a half of the next and the last of them that recently, is a **moving tag**: a channel, not trouble. It keeps its mark in the Explorer with one dim word — `moving` — beside it, and it never mails. Two changes and not one, because one change is exactly what a settled tag looks like when it cuts a release. What counts is *when the digest changed*, not how many times Vaier looked: an answer that repeats yesterday's digest records nothing, so neither a redeploy nor a **Check the registries now** can make a channel look settled. A tag that stops moving for a couple of days is mailed about again on its next change, and a release cadence measured in weeks never qualifies however many times it changes.
+
+When an image *newly* goes out of date, every admin gets **one rollup email** listing what changed — each line names the image *and the machine it runs on* (e.g. `vaultwarden/server:latest on Apalveien 5`), so you know which host to act on rather than just which image (three images going stale in one sweep is one mail; nothing changed is no mail). The same tag on two machines is tracked separately: it can read out of date on one and up to date on another, and each is alerted on its own. Unlike the machine up/down alerts, an image already stale the first time Vaier looks *is* reported — that's the incident this exists for. (The disk alerts report a first sighting too, for the same reason.)
+
+What Vaier can't tell, it says: an unreachable or rate-limited registry, a locally-built image, or an image pinned to an exact digest all read as **unknown** — never as up to date, never as out of date. In the **Explorer**, a container with an update available wears a small yellow mark, in the tree and in its machine's container list, so you spot it while scanning. The mark is advisory — red stays reserved for down. **Unknown draws no mark at all** (a grey smudge on every row would just teach you to ignore it), so no mark is *not* a promise that an image is current; where that matters, a container's Inspector says it in words — "Update available" or "Vaier cannot tell" — while an image that is up to date gets no Update line at all.
 
 ### Update
 
-An out-of-date container started by compose has an **Update** button. Vaier pulls the new image, recreates that container (briefly down), then removes the old image if nothing else uses it. If the recreate fails, the old container keeps running.
-
-No button for a container started by hand, one in Vaier's own stack, or one on a machine where Vaier's SSH user isn't in the `docker` group — add it, and the button comes back.
+Open the container and, if it's both out of date and started by compose, there's an **Update** button right there. Vaier pulls the newer image and recreates that one container from its own compose file, over SSH — never through the Docker API, so `docker-socket-proxy` stays as narrow as it's always been. It's briefly down while it restarts, and Vaier says so before you confirm. Once the container really is on the newer image, Vaier removes the image it replaced on that machine — exactly that one image, by its digest, so a machine updated all year doesn't quietly fill its disk with versions nothing runs. Never a host-wide prune and never forced: Docker refuses to remove an image another container still runs, and that refusal is the safety. A removal that is refused leaves the update **updated** — the container is up on the newer image, which is all that claims — and the reason goes to Vaier's log rather than to you. An update that failed removes nothing at all: the old image is still what's running. Images left behind by updates from before this shipped are yours to clear once, by hand. The pull and the recreate are reported separately: if the recreate fails, the old container is still running on the image it had, which is the good outcome of a bad update, and Vaier tells you that rather than a generic error. Three kinds of container don't get the button, only a plain reason in its place: one started by hand rather than by compose (Vaier doesn't know how to recreate it faithfully); one that's part of Vaier's own stack (pinned by, and updated with, a Vaier release itself — from **Settings**, not one container at a time; those aren't marked out of date either, see above); and any container on a machine whose Docker Vaier can't drive — if the user Vaier signs in as there isn't in that machine's `docker` group, every command an update would run is refused, so the whole machine's containers say so up front instead of failing one after another. Vaier can't guess that from the container list: those are read through Docker's API over the tunnel, which needs no group at all, so such a machine looks perfectly healthy. It learns it on the rounds it already makes (below), re-checks it every time, and the button comes back by itself once you've added the user to the group. The button follows the mark, so it shows up wherever "update available" does today: the Vaier server's own containers and those on your VPN **server peers** — LAN-server containers read as unknown for now (see above), so there's nothing yet to update there.
 
 ### Updating Vaier itself
 
-**Settings → Update Vaier** updates the whole of Vaier's own stack, compose file included, then runs `docker compose up -d`. If the stack doesn't come up, or Vaier doesn't answer within two minutes, it rolls back and Settings says so. The log is in `~/.vaier-upgrade/last-update.log` on the Vaier server.
+**Settings → Update Vaier** updates the whole of Vaier's own stack, not just the Vaier image. The image says which commit it was built from, and Vaier fetches that same commit's `install.sh` and runs it in your install directory. So the compose file and the files it mounts (the offline page, the sign-in templates, the Dex theme, CrowdSec's log config) always match the image. Then it runs `docker compose up -d` for the whole project. A service that changed is recreated, a changed init container runs again, and anything unchanged is left alone. `wireguard-masquerade` is always recreated, because a recreated `wireguard` takes it down.
 
-It never touches your `.env` values or runtime folders (`vaier/config`, `wireguard/config`, `traefik/acme`, …), and it doesn't remove orphan containers. The first update onto this version is image-only.
+It all happens in a detached script on the host, over the same SSH connection the nightly backup uses, because Vaier can't recreate its own container and still be around to watch. Before it changes anything, it records the running image by digest and copies the runtime files. If the stack doesn't come up, or the new Vaier doesn't answer within two minutes, it puts both back: the previous image and the previous files. Then it brings the stack up again, and Settings says it rolled back. If the sync itself fails (network, a folder it can't write to), it puts the files back and reports that the update could not be carried out. Nothing has been recreated at that point. Each run's output is in `~/.vaier-upgrade/last-update.log` for the SSH user on the Vaier server.
+
+**What it never touches.** Your `.env` and every folder Vaier writes at runtime (`vaier/config`, `wireguard/config`, `traefik/config`, `traefik/acme`, `dex/config`, `oauth2/config`, `crowdsec/`'s state, logs) are left alone, the same as when you re-run `install.sh` yourself. The one thing `install.sh` may add to `.env` is a missing auto-generated secret that a new release needs. It never changes a value you set.
+
+**What it deliberately doesn't do.** It doesn't pass `--remove-orphans`. A container that the compose file no longer lists could be a sidecar Vaier has retired, or one of your own services in the same project, and Vaier can't tell which. A retired Vaier sidecar left running is harmless: `docker compose up -d --remove-orphans` clears it if you want. A locally built image doesn't say which commit it came from. On a host running one, Update replaces the image and leaves the files alone.
+
+The first update onto this version is still image-only, because the update script comes from the Vaier that is *already running*. After that one, every update brings the whole stack.
+
+Pulled something and don't want to wait for tomorrow's sweep? **Check the registries now**, in the head of a machine's container list, re-reads the containers and re-asks every registry, ignoring anything Vaier remembered — both halves matter, or the check could confirm the very mark you pressed it to clear. It's fleet-wide, still read-only, and if you just checked it says so rather than pretending to look again. Daily rather than continuous because manifest requests are rate-limited. Covers the Vaier server's own containers and those on your VPN **server peers**; LAN-server containers read as unknown for now.
 
 ---
 
@@ -116,23 +144,42 @@ It never touches your `.env` values or runtime folders (`vaier/config`, `wiregua
 
 <a id="reverse-proxy-audit"></a>
 
-The **reverse proxy audit** reads back the Traefik config Vaier writes (`remote-apps.yml`) and reports entries that lead nowhere: unused or missing middlewares, redirect loops, routers with no service, and services nothing routes to.
+Everything above watches the world outside: is the host up, is the disk filling, has the registry moved on. The **reverse proxy audit** is the one check pointed the other way — Vaier reads back the Traefik config it writes itself (`remote-apps.yml`) and asks whether the config it wrote is still coherent.
 
-**Vaier says so and does not touch the file.** It runs at startup and every five minutes. Findings show as one row in **Needs you** ("2 entries in the reverse proxy config lead nowhere"); **See which** lists them. You are mailed when findings appear, change, or clear.
+It exists because a defect in a write path is invisible until somebody opens the one URL it broke. That is exactly how it was found: `ERR_TOO_MANY_REDIRECTS` on a service published minutes earlier, and — once the file was actually read — four orphaned redirect middlewares no router referenced, three of them redirect loops, left behind by services unpublished weeks before. Nobody could have cleared them through Vaier either: unpublishing a router that no longer exists correctly answers "Router not found", which is a dead end.
+
+Five things are checked, each of them a one-liner over a file Vaier parses on every read anyway:
+
+- **An unreferenced middleware** — an `http.middlewares` entry no router names. Usually left behind by an unpublish.
+- **A dangling middleware reference** — a router naming a middleware that does not exist. This one breaks the route outright: Traefik refuses it.
+- **A self-referential redirect** — a `redirectRegex` whose `replacement` its own `regex` matches, so a request there redirects forever. Vaier no longer writes one, but a hand-edited file can still hold one.
+- **A router with no service** — naming none at all, or naming one that is not defined.
+- **A service nothing routes to** — no router and no error middleware sends anything to it.
+
+**Vaier says so and does not touch the file.** Deleting an entry Vaier did not write is a destructive act on your config, and a middleware you added by hand and reference from somewhere Vaier cannot see would be collateral. So a finding is a sentence, and removing anything stays your decision.
+
+**Two things are deliberately never reported.** A middleware reference that names another Traefik provider (`vaier-frame-guard@file`, `crowdsec-bouncer@file`, anything `@docker`) is declared outside this file by design — flagging those would make every router look broken. And the console's own chain (`oauth2-signin`, `oauth2-authn`, `vaier-authz`, `vaier-errors`, and the two services behind them) is kept present at every startup whether or not anything is published, so a fleet with nothing published would otherwise report six findings on a perfectly healthy file.
+
+**Where you see it.** The audit runs at startup and once on every five-minute fleet sweep — a local file read costs nothing next to a round of SSH sessions, and a config can rot between restarts, which here are rare. Findings appear as one row in **Needs you** at the top of the fleet ("2 entries in the reverse proxy config lead nowhere"), whose **See which** opens the findings themselves: a clean config paints nothing and reserves no space. Admins are mailed **on a transition only** — the first sweep that finds something, again whenever the *set* of broken entries changes (a newly broken entry is news; the same one still sitting there is not), and once more when everything is clear again. What you have already been told is kept on disk, so a redeploy cannot turn "on a transition" into "on every deploy".
 
 ## Pre-flight
 
-The one place that answers **"is this thing working?"** It checks the wildcard DNS record, the certificate (missing or under a fortnight left), WireGuard, and the server's own disk. Only a failing check appears, in **Needs you**, saying what is wrong and what to do. **A healthy check paints nothing.**
+The one place that answers **"is this thing working?"** A misconfiguration — the wildcard record pointing elsewhere, a certificate never issued, WireGuard down, the server's own disk full — used to surface later, as a failed publish or a page a browser warned about, long after the operator had moved on from the cause. The **pre-flight** judges Vaier's own basics from facts it already has or can learn on a path that exists: the wildcard verdict the boot probe took; the certificate the front door actually presents, read off a live TLS handshake from inside the stack (Traefik's self-signed placeholder means none has been issued yet, and one with under a fortnight left means renewal is not happening); whether WireGuard answers at all; and whether this server's own disk is past its threshold.
+
+**Where you see it.** In **Needs you** at the top of the fleet, under the rule that runs through that list: **a healthy check paints nothing**. Only a failing check appears, as two sentences — what is wrong, and what to do — with no button, because the fix lives outside Vaier (a DNS provider, port 80, the wireguard container). No separate page and no header badge, because a green badge is a heartbeat and Vaier does not send those. Every "what counts as wrong" is the domain's decision (`PreFlight`); the page only shows the words. The server's own disk is the exception to its own row: it is said once, as the Vaier server's disk row in the same list ("…Vaier itself may stop working"), so the same full disk is never said twice. Two things it deliberately does not check: the reverse proxy config, which the audit above covers as its own row, and whether mail actually sends — Vaier keeps no record of a failed send yet, and a guess would be worse than silence. A crash-looping Dex is the one failure no panel inside Vaier can show, since Dex sits behind the only door; that one belongs on the offline page.
 
 ---
 
 ## What the edge blocks
 
-Vaier shows what [CrowdSec](NETWORKING.md#edge-hardening) is blocking live in the Explorer's **Security** view, where you can lift a block or trust an address — see [`docs/EXPLORER.md`](EXPLORER.md#security).
+Every few minutes Vaier reads which addresses [the edge's CrowdSec bouncer](NETWORKING.md#edge-hardening) is currently turning away, and pushes the whole list, live, to the Explorer's **Security** view — where you can see every current block, lift it, or trust an address — and see and undo everything you've trusted. See [`docs/EXPLORER.md`](EXPLORER.md#security). Each entry reads as a sentence: the address, where CrowdSec places it (`195.178.110.155 (BG · Techoff Srv Limited)`), the scenario that caught it, and how long the block lasts.
 
-**Almost none of it is emailed, on purpose.** Scanners hit every address all day; blocking them is CrowdSec working. Two things do reach you:
+**Almost none of it is emailed to you, on purpose.** The internet scans every address it can reach, all day: probing, WordPress scans, backdoor attempts, bad user agents, crawlers. CrowdSec blocking them is CrowdSec working correctly, and a notification is meant to mean something is wrong or about to go wrong. Mailing each one buried the alerts that matter under alerts nobody can act on, so Vaier stopped. In normal operation the edge is busy and your inbox stays **empty** — the Security view still lists every single block.
 
-- **A credential attack** — brute force or password spraying aimed at *your* fleet. One rollup per sweep.
-- **One of your own networks being blocked** — a ban inside your **trusted networks** means your own access is next. It gets its own lockout warning, in time to lift the block.
+Two things do reach you.
 
-There is **no all-clear** when a block expires.
+**A credential attack.** Brute force, password spraying, an authentication endpoint being ground at — somebody has decided to spend time on *your* fleet rather than scanning the whole internet. One rollup per sweep, naming each source the same way the view does, and each one reported only once. Vaier decides this from the scenario's own name, and errs towards silence: a scenario it doesn't recognise is treated as routine scanning, because the cost of guessing wrong in the other direction is exactly the inbox noise this removed. An address you [blocked by hand](EXPLORER.md#security) is never one of these, whatever its scenario name happens to read like — nobody is attacking on a block you placed yourself.
+
+**One of your own networks being blocked.** If CrowdSec bans an address inside your **trusted networks** — the VPN subnet, the Docker bridge, a relay's LAN, or an address you trusted by hand — nobody is attacking you: the allowlist that is supposed to make that impossible has stopped protecting you, and your own access to Vaier is what goes next. That gets its own mail, with its own subject (`[Vaier] Lockout warning: your own 10.13.13.6 is blocked at the edge`), and it is never folded into anything titled "breach attempt" — it would point you in exactly the wrong direction. It's the one alert here that reaches you *before* the damage, while you can still lift the block from the Security view.
+
+Unlike the machine up/down alerts, a block that was already active the first time Vaier looks *is* reported, restart included — someone working on your logins is news whenever you learn of it. And there is deliberately **no all-clear**: a block quietly expiring on its own timer isn't good news the way a disk draining is. A standing lockout mails once, not every five minutes.

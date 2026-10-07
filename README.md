@@ -4,67 +4,163 @@
 
 # Vaier
 
+[![Build](https://github.com/getvaier/vaier/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/getvaier/vaier/actions/workflows/build-deploy.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/getvaier/vaier)](https://hub.docker.com/r/getvaier/vaier)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 
-**Vaier** (Norwegian for *wire*, said **VY-er**) is the glue for your homelab: one server on the internet, your machines at home behind WireGuard, and every service one click from its own HTTPS address and login.
+**Vaier** — Norwegian for *wire* (as in cable), pronounced **VY-er** — is the glue for your homelab.
 
-![Vaier's Topology view](web/img/topology.jpg)
+One box on the internet. Your machines at home, behind WireGuard. Every service gets an HTTPS address, a login, and a dashboard tile — nothing to configure by hand: no Traefik files, no WireGuard configs, no DNS record beyond the one wildcard you make on day one.
+
+---
 
 ## What it does
 
+Each row is the short version. The linked page carries the mechanism, the caveats and the reasons.
+
 | Feature | In short |
 |---------|----------|
-| **VPN fleet** | Servers, LAN devices, phones and laptops join one WireGuard network; the Vaier app joins with a four-digit code. → [Networking](docs/NETWORKING.md) |
-| **Publishing** | Any container becomes an HTTPS site in one click, behind one wildcard DNS record you make once. → [Networking](docs/NETWORKING.md#publishing-a-service) |
-| **Sign-in & access** | Start with a first-run password, add Google or GitHub later, and choose who opens each service. → [Auth](docs/AUTH.md) |
-| **Edge protection** | Traefik and CrowdSec turn scanners away, and Vaier says who and why. → [Networking](docs/NETWORKING.md#edge-hardening) |
-| **Explorer** | Files, containers, disks and backups across every machine in one place, opening on what needs you. → [Explorer](docs/EXPLORER.md) |
-| **Map & Topology** | Your sites and tunnels on a map, or as one picture. Nobody is tracked. → [Explorer](docs/EXPLORER.md#topology) |
-| **Web terminal** | A persistent SSH shell to any machine in the browser; credentials stay on the server. → [Explorer](docs/EXPLORER.md#web-terminal) |
-| **Backups** | Tick what matters and press **Back up**; archives stay readable even without Vaier. → [Backup](docs/BACKUP.md) |
-| **Alerts** | Disk forecasts, stopped containers, image and OS updates — mail only when something is wrong. → [Monitoring](docs/MONITORING.md) |
-| **Chat** | Ask Marvin about your fleet in plain words; he acts only on your click. → [Chat](docs/CHAT.md) |
+| **VPN mesh** | WireGuard peers and LAN servers (NAS, printers, extra Docker hosts) join one mesh, with cross-site routing between your networks and no CIDR to type. Personal devices resolve names through the Pi-hole Vaier ships with. → [Networking](docs/NETWORKING.md) |
+| **Wildcard DNS** | One `*.yourdomain.com` record, made once, covers the console, sign-in, and every service you ever publish. Vaier checks it at every boot. → [Networking](docs/NETWORKING.md#wildcard-dns) |
+| **Reverse proxy & edge hardening** | Traefik terminates HTTPS with Let's Encrypt, enforces a security-header and TLS floor on every route, and shows a branded offline page when a backend is down. CrowdSec blocks malicious traffic at the edge; the Explorer says each block in plain words, and you can lift one (even your own), trust the address, or block one yourself. → [Networking](docs/NETWORKING.md#edge-hardening) |
+| **Service publishing & Your services** | Publish any container's web interface in one click. A port that isn't a website — MQTT, a database — is published as a **stream** on the same HTTPS port. **Your services** shows each visitor only what they may reach. → [Networking](docs/NETWORKING.md#publishing-a-service) |
+| **Access management** | Day one needs no OAuth app: the first-run password in Vaier's log makes the first sign-in the admin. Add Google or GitHub, let people in and give them roles and per-service groups, all from People. Vaier can hand a gated service its own login, and flags any service left open to anyone. → [Auth](docs/AUTH.md) |
+| **The Vaier app** | The only way an Android phone or a Windows computer joins: it makes its own key, shows a four-digit join code, and connects the moment you let it in from any browser you're signed in on. The fleet sees it connect and disconnect at once. → [Networking](docs/NETWORKING.md#enrolment-from-the-vaier-app) |
+| **Explorer** | One address space for the whole fleet: files, containers, services, disks and backup archives, with transfer across machines and a link for every place you stand. Each machine says where it stands and installs its OS updates on your yes. An in-app glossary explains every term. → [Explorer](docs/EXPLORER.md) |
+| **Map** | One marker per site — the Vaier server and each fixed-line peer with the machines behind it — joined to the server by its tunnel, red when anything there is down. Blocked addresses ping red; phones and laptops are never tracked. → [Explorer](docs/EXPLORER.md#map) |
+| **Topology** | The fleet as one picture: the internet is the open sea, the Vaier server a lighthouse, each LAN a village on a northern or southern coast, every tunnel a wake to the light, and every blocked address a pirate ship turned away. → [Explorer](docs/EXPLORER.md#topology) |
+| **Web terminal** | A real, persistent SSH shell to any machine, in its own window, reattached across reconnects and redeploys. → [Explorer](docs/EXPLORER.md#web-terminal) |
+| **Host & fleet credentials** | One encrypted vault holds the SSH login for every machine; the browser never sees a secret. A **fleet credential** is the other direction: one secret Vaier places on every machine, verifies, and puts back when it goes missing. → [Explorer](docs/EXPLORER.md#host-credentials) |
+| **Claude sign-in** | Sign each machine's Claude Code CLI in to your own Anthropic account from that machine's terminal window. The credential is Anthropic's to mint and the CLI's to keep — it never passes through Vaier. → [Explorer](docs/EXPLORER.md#claude-sign-in) |
+| **Fleet backup & survival kit** | Tick what matters in a machine's files and press **Back up**; Vaier does the rest, nightly, to the one machine you named as the backup server. A self-updating survival kit keeps the archives readable even if Vaier itself is gone. → [Backup](docs/BACKUP.md) |
+| **Monitoring & alerts** | Disk watching with a fill-rate forecast that mails you about a week before a disk fills, a word when a container that was running stops, turns unhealthy or starts restart-looping, image-update detection with a one-click **Update**, and an inbox that stays quiet unless something is wrong. → [Monitoring](docs/MONITORING.md) |
+| **Is it working?** | Vaier checks its own basics — the wildcard record, the certificate on its front door, the tunnel, the reverse proxy config — and says only what is wrong, with what to do, under **Needs you**. A healthy server shows nothing. → [Monitoring](docs/MONITORING.md#pre-flight) |
+| **Chat** | Ask about your fleet in plain sentences and Marvin answers — from Vaier's own facts, a read-only command, a published service's own API, or a public web page. He acts only on your yes, hands you files, and runs errands that mail you what he found. → [Chat](docs/CHAT.md) |
+| **Needs you** | The top of the fleet says what wants you — a machine not answering, a failed backup, a filling disk, alert mail that stopped going out, someone waiting to join, a newer Vaier — one sentence, its evidence and one button each, and nothing at all when all is well. → [Explorer](docs/EXPLORER.md#needs-you) |
+
+![Your services in Vaier](docs/vaier-launchpad.png)
+
+---
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    browser([User browser])
+    server[Vaier server]
+    p1[Peer 1 container]
+    p2[Peer 2 container]
+
+    browser -->|HTTPS| server
+    server <-->|WG tunnel| p1
+    server <-->|WG tunnel| p2
+```
+
+Every published service resolves to the single Vaier server through your one `*.yourdomain.com` record, terminates TLS at Traefik, optionally passes social-login authorization (Google or GitHub via oauth2-proxy, then Vaier's own access check), and is proxied over WireGuard to the container running on a peer. A **stream** takes the same path as far as TLS — matched by the name in the handshake — and then forwards raw bytes; it carries no login, because nothing inside it is a web request. More in [`docs/NETWORKING.md`](docs/NETWORKING.md).
+
+---
+
+## Prerequisites
+
+- A Linux server with a public IP (EC2 t3.small or similar)
+- Docker and Docker Compose v2.23+ (the compose file embeds an inline `configs:` entry, which requires Compose v2.23 or newer — December 2023). The installer offers to install current Docker if it is missing.
+- A domain name you control, hosted anywhere that can serve a wildcard `A` record
+
+### Server ports to open
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 22 | TCP | SSH |
+| 80 | TCP | HTTP (Let's Encrypt challenge) |
+| 443 | TCP | HTTPS |
+| 51820 | UDP | WireGuard VPN |
+
+---
 
 ## Quick start
 
-You need a Linux server with a public IP (a t3.small is plenty), TCP 22, 80, 443 and UDP 51820 open, and a domain you control.
+### 1. Run the installer
 
-**1. Run the installer** on the server — no git clone:
+On the server, in the folder Vaier should live in — **no git clone**:
 
 ```bash
 mkdir -p vaier && cd vaier
-curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | bash
 ```
 
-It asks for your domain, email and time zone, and offers to install Docker.
+It asks three things — your domain, your email and your time zone — and offers to install Docker if it is missing. Sign-in providers are set later in the console's **People**, and mail in its **Settings**. More in [`docs/ADVANCED.md`](docs/ADVANCED.md#the-installer).
 
-**2. Make one DNS record** if the installer asks for it: `*.yourdomain.com  A  <this server's IP>`. It covers every service you will ever publish.
+### 2. Point your domain at it
 
-**3. Start Vaier and sign in.** Say yes when the installer offers to start Vaier. It prints your first-run password; the first person to sign in becomes the admin.
+The installer checks whether `vaier.yourdomain.com` already reaches this server. If not, it prints the one record to make, with this server's public IP filled in:
 
-Then add your machines from the **Explorer**. Installer details and running without a terminal: [Advanced](docs/ADVANCED.md#the-installer).
+| Record | Type | Value |
+|--------|------|-------|
+| `*.yourdomain.com` | A | the public IP of this server |
 
-## Updating
+That single wildcard covers the console, the sign-in hosts, and every service you publish from now on. You can start Vaier before it resolves: Vaier waits for it before asking Let's Encrypt. Caveats are in [`docs/NETWORKING.md`](docs/NETWORKING.md#wildcard-dns).
 
-Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
+### 3. Start Vaier and sign in
 
-## Removing Vaier
+Say yes when the installer offers to start Vaier. It waits for the boot and prints your **first-run sign-in**: the console URL, the email and the password. Open the URL, press **Sign in with the first-run password**, and that first sign-in becomes the admin. Anyone who signs in later lands as **pending** until you approve them in **People**. More in [`docs/AUTH.md`](docs/AUTH.md).
+
+No terminal (piped to a log, CI)? The installer then only fetches files and writes `.env`: set `VAIER_DOMAIN` and `ACME_EMAIL` in it, run `docker compose up -d`, and read the password at the bottom of `docker compose logs vaier`.
+
+From here: add your machines and publish their services from the **Explorer** — see [`docs/NETWORKING.md`](docs/NETWORKING.md). Want to ask Vaier about your fleet instead of clicking through it? Paste your own Anthropic API key under **Settings** and the **Chat** pane appears in the **Vaier** menu — see [`docs/CHAT.md`](docs/CHAT.md). For optional environment variables, secret-file hardening, and other advanced topics, see [`docs/ADVANCED.md`](docs/ADVANCED.md).
+
+---
+
+## Updating an existing install
+
+Re-run the same installer in your install directory:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/uninstall.sh | bash
+cd vaier
+curl -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | bash
 ```
 
-It lists everything it will remove and asks first. Works even if you already deleted the install folder.
+It asks nothing this time, and offers to bring Vaier up to date (without a terminal, follow it with `docker compose up -d`). It refreshes the compose file and the assets the stack bind-mounts, leaves your `.env` values untouched, and adds any secret a newer release generates but your `.env` predates.
 
-## More
+Or press **Settings → Update Vaier**, which does the same and rolls it all back if the new Vaier doesn't answer. See [Monitoring](docs/MONITORING.md#updating-vaier-itself).
 
-- [How it fits together](docs/NETWORKING.md) · [Advanced settings](docs/ADVANCED.md) · [Issues](https://github.com/geir-eilertsen/vaier/issues)
+If `docker compose up -d` stops with something like
+
+```
+required variable VAIER_CROWDSEC_BOUNCER_KEY is missing a value:
+not in .env — re-run install.sh to generate it
+```
+
+your `.env` was written before that secret existed. Re-run the installer as above and start again. Compose refuses at config-parse time, before it touches a single container, so a stack that is already running keeps running.
+
+---
+
+## Roadmap
+
+The backlog is tracked in [GitHub Issues](https://github.com/getvaier/vaier/issues). Feature specs for planned items are in [`PRD.md`](PRD.md).
+
+---
+
+## Contributing
+
+Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development guide (architecture, TDD rules, build instructions, PR expectations).
+
+---
 
 ## Disclaimer
 
-Vaier is a personal homelab tool provided as-is; use it at your own risk. Running it exposes infrastructure to the internet, and you are responsible for what you deploy. It comes with no warranty of any kind, and its authors are not liable for any damage or loss from using it.
+Vaier is a personal homelab tool provided as-is. Use it at your own risk. The authors accept no responsibility for security incidents, data loss, service outages, misconfigured firewalls, exposed services, or any other damage arising from its use. Running this software means exposing infrastructure to the internet — you are responsible for understanding what you are deploying.
+
+The Apache License 2.0 (below) contains the full warranty disclaimer and limitation of liability in sections 7 and 8.
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
 
 ## Attribution
 
-IP geolocation on the map is provided by [DB-IP](https://db-ip.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+IP geolocation on the Explorer's map is provided by [DB-IP](https://db-ip.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The `geoip-init` container downloads the latest DB-IP City Lite database to a local volume on first boot and refreshes it monthly.
+
+---
+
+*Built for the self-hosted community.*

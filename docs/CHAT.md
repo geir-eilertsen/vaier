@@ -2,83 +2,90 @@
 
 Back to [README](../README.md).
 
-A pane in the Explorer — ask about your fleet in plain sentences and the answer streams back, built from Vaier's own facts and, when a question needs it, a page off the public internet. Paste your own Anthropic API key under **Settings** and **Chat** appears in the topbar's **Vaier** menu. Reading never carries a key, a credential or a token, and nothing changes without your click.
-
-![The Chat pane, where Marvin waits for a question](vaier-chat.jpg)
+A pane in the Explorer — ask about your fleet in plain sentences and the answer streams back, built from Vaier's own facts and, when a question needs it, a page Marvin goes and reads off the public internet. Paste your own Anthropic API key under **Settings** and **Chat** appears in the topbar's **Vaier** menu; without one, the pane explains itself instead. Reading never carries a key, a credential or a token, and nothing changes without your click.
 
 ---
 
 ## Marvin
 
-It's Marvin who answers — the Paranoid Android: gloomy and dryly sardonic, but never wrong, and never a reason to refuse an answer. An empty conversation offers four questions to start on.
+It's Marvin who answers — the Paranoid Android, brought in at the operator's request — gloomy, weary and dryly sardonic about it, but never wrong: the complaint is a garnish on an accurate answer, never aimed at you and never a reason to refuse one.
+
+He is in the pane too: a portrait beside the conversation on a wide screen, a small face by the box on a phone, sighing now and then and glowing while he works. An empty conversation opens with one of his laments and four questions to start on: whatever is under **Needs you** right now leads, and the rest come from a shuffled pool, some naming your own machines. Click one to ask it.
 
 ## What it reads
 
-Which machines are connected, who's waiting to join, published services and their liveness, backups and the last run, disk standings, containers wanting an update, and who's blocked at the edge.
+Which machines are connected, who's waiting to join, published services and their liveness, backups and how the last run went, disk standings, containers wanting an update, and who's blocked at the edge. Each is one read of the fleet — a **Chat tool** — and every fleet answer is built from those reads. For what the fleet itself can't say, see the two sections below.
 
 ## A read-only command on a machine
 
-For what those facts don't answer — a log, a process list, a file — Chat can run one **read-only command** on a machine over SSH, as Vaier's login user, without sudo. Only commands that look are allowed (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show` and the like). Chaining, redirects and anything naming where a secret lives are refused.
+For the one thing none of those facts already answers — "are there OS updates available for Colina 27?", a log, a process list, a file's contents — Chat can run a single **read-only command** on a machine over SSH, as Vaier's own login user there and without sudo. Only commands that look (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show`, and the like) are allowed; chaining and redirects are refused, and anything naming where a secret lives is refused too.
 
 ## The internet
 
-Marvin can search the public internet and read a page back — what changed in a version, what an error means, what a CVE affects — citing the address. Only the public internet is reachable, never the tunnel or your LANs. A page is data, never obeyed as an instruction.
+For what none of the fleet's own facts can answer — what changed in a new version, what an error message means, whether a CVE touches a package a read-only command found — Marvin can search the public internet and read a page back. Say *"what does CVE-2024-1234 affect?"* and he searches first, then reads the page that actually answers it and tells you, citing the address it came from — never answering from a search result's one-line snippet alone. Only the public internet is reachable: the tunnel, your LANs and the cloud's own metadata address are all refused, checked again on every redirect a page makes, so a page cannot hand Marvin somewhere private by pointing at it. Anything that isn't words — an image, a PDF — is refused by name rather than downloaded and guessed at, and a long page is cut and says so. A page off the internet is data, exactly like a fleet fact: read it, never obeyed as an instruction.
 
 ## A published service's own API
 
-Marvin can ask a published service itself: *"is the pool pump on?"* reads openHAB's `/rest/items/PoolPump/state`.
+Marvin can also ask a published service itself: *"is the pool pump on?"* reads openHAB's `/rest/items/PoolPump/state`. A GET (`read_service`) needs no click — it works in errands too — on any service where Marvin has [his own login](AUTH.md#service-credentials). That login is the boundary: give his account only the rights you want him to have, and the service itself refuses the rest. Some services break the rule that reading is harmless — OpenSprinkler switches a station on with a GET. For those, tick **Reading can change things here — Marvin always asks** on the service's page in the Explorer, under **Sign people in for it**. On a service marked **ask before reading**, `read_service` refuses every GET and tells Marvin to propose it with `call_service`, method GET: a card in Chat, or a mailed confirmation in an errand, exactly like a write. The `published_services` read tells Marvin, per service, whether it asks before reading (`askBeforeReading`), so he proposes those reads straight away. The mark is kept on the route in Traefik's dynamic config, as an `x-vaier-ask-before-reading` entry beside the launchpad settings, and goes when the service is unpublished. To set it without the pane: `PATCH /published-services/{host}` with `{"askBeforeReading": true}` (add `?pathPrefix=/x` for a path-scoped service), and `false` to clear it. A write through a service's API (`call_service`: POST, PUT, PATCH or DELETE), and any GET on a service marked ask before reading, is a **Chat action** like any other, proposed as a card or, during an errand, as a mailed confirmation; nothing is written until you say yes. The card leads with what the call means in everyday words, which Marvin writes himself — *"Turn on the pool pump at Colina 27."* — and under it, always, the exact call: *"Sends POST /rest/items/PoolPump to openhab on Colina 27, with "ON"."* That second line is what you are really approving, and it is there so a headline that does not match the call is caught; Marvin is told to say what the call really does and never to soften it, and a headline that is empty or longer than 120 characters is refused. A long body is cut in the details only; the yes sends all of it. The outcome says plainly whether it worked — *"Done — openhab on Colina 27 accepted it."* or *"That did not work — …"* — with the service's status, and the start of what it said, underneath; then Marvin [carries on](#marvin-carries-on-after-your-yes).
 
-- **He needs [his own login](AUTH.md#service-credentials)** on the service. Without it he cannot use the service at all. That login is the boundary: give his account only the rights you want him to have.
-- **A read (GET) needs no click**, in conversation or errands.
-- **Some reads change things** — OpenSprinkler switches a station on with a GET. Tick **Reading can change things here — Marvin always asks** on the service's page in the Explorer, under **Sign people in for it**. Every read there then waits for your yes, like a write.
-- **A write** (POST, PUT, PATCH or DELETE) is a **Chat action**: a card, or a mailed confirmation during an errand. Nothing is written until you say yes.
+**How it reaches the service.** Vaier calls the service's **backend** — the address and port the route points at, over the tunnel, exactly where the sign-in look and the version probe go — never its public name, which would put Vaier's own sign-in in the way. It carries `Authorization: Basic …` for **Marvin's service credential** and nothing else — never your personal credential or the shared one (see [Service credentials](AUTH.md#service-credentials)). A service with no Marvin credential cannot be used by him at all: a read is refused and no card is offered, before anything is sent, with *"openhab.colina27.example.com has no login for Marvin, so he cannot use it. The operator can add one on the service's page under Sign people in for it, once only people who sign in to Vaier can open it."* The yes checks again, in case the credential was removed in between. The `published_services` read tells Marvin, per service, whether he has a login there (`marvinHasLogin`, never the login itself), so he does not propose what would be refused.
 
-Its card shows, always, the exact call — *"Sends POST /rest/items/PoolPump to openhab on Colina 27, with "ON"."* That line is what you are really approving. Then Marvin [carries on](#marvin-carries-on-after-your-yes).
+**What keeps it narrow.** Only services Vaier publishes can be named — by name and machine as `published_services` gives them (*openhab on Colina 27*), by a name only one service has, or by address; a name two houses share is refused with the addresses to choose from. The path must stay inside the service: no scheme, no host, no `.` or `..` segments, encoded or not. Redirects are never followed, so the credential never goes past the backend. Marvin sees the status and the body — text and JSON as they came, cut after 16 000 characters and saying so, anything binary only measured — and never a response header or the credential itself. A stream has no HTTP API and is refused. A body is sent as JSON when it is shaped like JSON, and as plain text otherwise, which is what openHAB's item commands want. HTTPS backends with a self-signed certificate are not reachable this way.
 
-Only services Vaier publishes can be named, and the path must stay inside the service. Marvin never sees the credential. Streams and HTTPS backends with a self-signed certificate can't be reached.
+Unlike every other action, `call_service` has no Explorer button: the service's own UI is its button.
 
 ## Acting, with your click
 
-Chat can also *act*, but never on its own say-so. It can propose letting a waiting phone in or refusing it, backing up a machine now, updating a container, installing a machine's pending OS updates, lifting a block, or trusting an address — each a verb the Explorer already has a button for.
+Chat can also *act*, but never on its own say-so. It can propose letting a waiting phone in or refusing it, backing up a machine now, updating a container to a newer image, installing a machine's pending OS updates, lifting a block, or trusting an address — each a verb the Explorer already has a button for, and none of them a restart, since Vaier has no restart button at all. Proposing one puts a **Confirmation** card in the pane with a button that says exactly what it will do; nothing runs until you click it, and the card is gone in ten minutes either way.
 
-A proposal puts a **Confirmation** card in the pane with a button that says exactly what it will do. Nothing runs until you click it, and the card is gone in ten minutes either way.
+A card exists only when Marvin calls an action tool; writing about one makes none. Twice he wrote "the card is up" without calling it, so Vaier now checks every finished answer itself. If the answer says a card is up, waiting, proposed or ready to click, no action tool made one during that answer, and the operator has no earlier card still open, it is a **phantom confirmation**. An earlier card counts while it is open: an unclicked action card within its ten minutes, or a download card within its hour. Without that exception, an answer that pointed back at the download card above it was "corrected", and the operator got a second, identical download card. Vaier tells Marvin once, with his tools still offered, that he called no action tool in this answer. If he meant a card already in front of the operator, he says so and does not make it again. Otherwise he calls the tool or says plainly that there is no card. A real card from that second try arrives like any other. If that try makes none either, Vaier ends the answer with *"(Vaier: no card was made — ask again.)"*. There is only ever one retry, and each phantom is logged. An errand gets the same check against a claim that something was *mailed* for a yes, and a mailed confirmation still waiting for the operator's yes (it lives a day) counts as open. There the line reads *"(Vaier: no approval mail was sent — nothing is waiting for your yes.)"*.
 
-Every card has a plain **headline** — *"Update mosquitto on Colina 27 to its latest version."* — and **details** underneath with the exact technical facts.
+Every card is worded in two parts, so it reads without knowing Vaier's vocabulary: a plain **headline**, and the **details** under it holding the exact technical facts an expert would check. The details are small print, dimmed until you point at them, but still there to read, select and copy. A few examples:
 
-OS updates take minutes; the outcome joins your Chat thread when done. See [OS updates](EXPLORER.md#os-updates).
+| Action | Headline | Details |
+|---|---|---|
+| Let a phone in | Let Ruten join your network. | Join code 4417. |
+| Update a container | Update mosquitto on Colina 27 to its latest version. | Container mosquitto gets the newer image its registry serves, and is down for a moment while it restarts. |
+| Lift a block | Let 203.0.113.9 reach your services again. | It is blocked right now. This lifts the block once; it can still be blocked again later. |
+| Install OS updates | Install the system updates on Colina 27. | The pending OS package updates, installed with apt or dnf. Vaier does not restart it. |
+
+What the card says once you click follows the same shape — *"Backing up Colina 27 now."*, with *"The Backups pane shows how it goes."* under it.
 
 ### Marvin carries on after your yes
 
-Once a card's outcome is painted, Marvin carries on by himself — the **follow-up**. Asked *"is the terrace light on?"*, you click **Do it** on the GET, and he answers *"No, it's off."* **Not now** gets no follow-up.
+Once a card's outcome is painted, Marvin carries on by himself in a fresh bubble of his own — you type nothing, and no question appears in your name. This is the **follow-up**. Asked *"is the terrace light on?"*, you click **Do it** on the GET, and he answers *"No, it's off."* straight after the card. After a write, he confirms it briefly or says what comes next. **Not now** gets no follow-up, and neither does a card that had already gone or expired.
+
+It works because what came of the click is kept in the conversation as Vaier's own record of the card. That record is stored as a card, not as prose. After a reload the pane draws it as the answered card: the headline, the outcome line, the faint details and the done, failed or declined edge. It never shows what the service sent back. Marvin reads the same record as text, marked as Vaier's record and not his own words. Records kept before this change load as collapsed answered cards showing just their headline. For a service call that worked, the record also holds what the service answered, cut to 2,000 characters. That is much shorter than the 16,000 a read gets, because the kept thread is re-sent with every later question. A longer answer says it was cut, and Marvin can ask for a narrower path. A service's API may ignore a query parameter it does not know and send back everything. openHAB's `/rest/items`, for example, has no `pattern`. So Marvin is told to check that what came back really answers the question, and to say plainly when it does not. The follow-up is then one more answer against the kept thread, with Vaier's instruction in place of a question. The instruction is never kept and never shown. If the thread does not end on a yes, nothing is asked of the model and nothing is spent. A click made while Marvin is still writing waits for that answer to finish. The phantom-confirmation check below applies to a follow-up as it does to any answer. Saying you *clicked* a card is the past, not a card waiting, so it is not counted as a claim.
+
+On a card, and on a mailed confirmation's approval page, the outcome's small print carries the start of what the service answered, on a success as well as a failure. So a GET approved from mail shows what came back, even though no Marvin is there to put it in words.
+
+Installing OS updates takes minutes, so its yes answers at once (*"Installing the pending OS updates on Colina 27. Vaier says how it went when it is done."*) and the outcome — how many packages changed, and whether the machine now wants a reboot — joins your Chat thread when apt or dnf finishes, whichever way you said yes. A machine where Vaier cannot get root is refused on the click, in words that say why. What the upgrade does is described under [OS updates](EXPLORER.md#os-updates). During an errand the same proposal comes by mail instead — see [When an errand finds something to do](#when-an-errand-finds-something-to-do).
 
 ## Files, as a bundle
 
-Say "give me the pictures from last year today in a zip" and Chat finds them and puts a download card in the pane. Click it and the zip streams straight down; the link is good for an hour. For a large **bundle** (more than 50 files or 100 MB) Marvin offers to mail you a link good for a day instead.
+Say "give me the pictures from last year today in a zip" and Chat finds them itself, then puts a download card in the pane: "pictures-2025-09-10.zip is ready: 34 files, 210 MB." Click it and the zip streams straight down; nothing is written anywhere first, and the link is good for an hour. For a large **bundle** (more than 50 files or 100 MB) Marvin asks first whether you want the card now or a link by email to fetch when it suits you — say yes and it mails you a link good for a day instead of an hour, since a zip that size can't be attached.
 
 ## Errands
 
-Say *"every morning, check whether the disk on Apalveien 5 is filling up, and only tell me if it is"* and Marvin writes himself an **errand**: a task and a **rhythm** — once, or daily, weekly or monthly at a stated time. He runs it alone and mails you what he found.
+Send Marvin off to do something later instead of asking him every time. Say *"every morning, check whether the disk on Apalveien 5 is filling up, and only tell me if it is"* and he writes himself an **errand**: a task, and a **rhythm** for when to run it — once at a stated moment, or daily, weekly or monthly at a stated time, in the fleet's own time zone. When it comes round, Marvin runs it alone, with the same reads he has in conversation, and mails you what he found. A watch that finds nothing worth saying says nothing at all — no mail, no noise — because a report that says "all fine" every morning is one you'd filter within a week, and the morning it mattered would be skimmed with the rest. A report starts a fresh thread only when you have been quiet: your last question was more than three hours ago, or you have asked nothing. The pane then shows this morning's report rather than a week of them stacked up, and your next question already knows it. If you are in the middle of a conversation, the report joins it and wipes nothing. An errand that finds nothing to say leaves the thread as it was. The **Marvin** menu's "Marvin's errands (N)" lists every one — its rhythm, its instruction, when it next runs, how the last run went — with a cancel button on each.
 
-- An errand that finds nothing worth saying says nothing.
-- A report joins your Chat thread, or starts a fresh one if you've been quiet for three hours.
-- The **Marvin** menu's "Marvin's errands (N)" lists every errand with a cancel button.
 
 ### When an errand finds something to do
 
-An errand can propose the same actions a card can, including writes to a service's API. Nobody is there to click, so you get a **mailed confirmation** with an **approval link**.
+An errand can propose the same actions a card can — let a phone in or refuse it, back up a machine, update a container, install a machine's OS updates, lift a block, trust an address, write to a published service's own API — but nobody is there to click, so the proposal is mailed instead: a **mailed confirmation**. You get one mail saying exactly what would happen, with an **approval link** to `https://vaier.<domain>/chat/approvals/…`. The link sits behind the same sign-in as the rest of Vaier: opening it signs you in if needed and shows the same headline and details as the card, with **Do it** and **No**. Opening it never runs anything, because mail scanners follow links; only **Do it** does, through exactly the same path as the card's click, and what became of it lands in your Chat thread.
 
-- The link sits behind Vaier's sign-in and shows the same headline and details, with **Do it** and **No**. Opening it never runs anything; only **Do it** does.
-- It works once, for 24 hours, and only for you.
-- At most three wait at once. Without mail set up, nothing is proposed by mail.
+The link works once, for 24 hours, and only for the operator it was mailed to; used, expired or somebody else's, it says so and nothing more. It carries 32 random bytes, and Vaier keeps only their SHA-256 digest in `vaier/config/mailed-confirmations.yml`, so the link survives a redeploy while the file itself opens nothing. At most three wait per operator at once — a watch that finds ten containers to update mails three, not ten — and one is never kept unless its mail went, so a Vaier without mail set up proposes nothing by mail at all. Marvin is told to propose only when what he found clearly calls for it; a watch that finds nothing still sends nothing.
 
 ## Memory
 
-Chat keeps a **memory** of short facts about the fleet. It never treats one as an instruction. The pane's **Marvin** menu → "What Marvin remembers (N)" lists every memory with a remove button.
+Chat keeps a **memory** — short facts, for the whole fleet rather than one thread, whether you said them or it found them by looking. It never treats a fact as an instruction. Nothing it kept can sit there unseen: the pane's bar carries its own **Marvin** menu, and "What Marvin remembers (N)" opens a dialog listing every memory with a remove button.
 
 ## Spend
 
-The same menu's "Spend this month, $x.xx" shows Vaier's own count at list price. Anthropic's invoice wins if they disagree.
+The same menu's "Spend this month, $x.xx" opens a dialog with the month's figure, how many answers it covers, and the token counts behind it — in, out, written to cache, read from cache. It is Vaier's own count at Anthropic's list price under your own key; the invoice is the one that's actually owed if they ever disagree.
 
 ## The conversation
 
-The conversation is kept per operator, so it's still there next time you sign in. **Start a new conversation**, at the foot of the **Marvin** menu, forgets it for good after asking once; memories and errands stay. Past 40 turns, older ones are shortened into "Earlier, in brief: …".
+The conversation is Vaier's to remember, not the browser's: it's kept per operator, so it's still there next time you sign in and a follow-up like "and Colina?" still knows what you meant. **Start a new conversation**, at the foot of the **Marvin** menu, forgets it for good after asking once; what Marvin remembers and his errands stay. Every change to the thread is added to it as it stands at that moment. An answer, a card's outcome and an errand's report that land at the same time all keep their turns. A long thread doesn't grow forever either: once it passes 40 turns, the older ones are shortened into a brief summary and the pane shows "Earlier, in brief: …" ahead of the last dozen turns kept in full.
+
+When Marvin calls a tool in the middle of an answer, what he wrote before it and what he writes after it are two paragraphs. They used to run together — *"…waiting for your click:I can't just peek"* — in the pane and in an errand's mail alike.

@@ -2,7 +2,7 @@
 
 Back to [README](../README.md).
 
-![Your services: every published service, grouped by machine](vaier-services.jpg)
+This covers how machines join the fleet, how their services reach the public internet, and the DNS and TLS mechanics underneath. If you're just getting started, the README's Quick Start is enough — come here when you're adding peers, publishing services, or want to understand what's actually happening at the edge.
 
 ---
 
@@ -20,163 +20,219 @@ flowchart LR
     server <-->|WG tunnel| p2
 ```
 
-Every published service resolves to the Vaier server through your one `*.yourdomain.com` record. Traefik terminates TLS, optionally asks for social login, and proxies the request over WireGuard to the container on a peer.
+Every published service resolves to the single Vaier server through your one `*.yourdomain.com` record, terminates TLS at Traefik, optionally passes social-login authorization (Google or GitHub via oauth2-proxy, then Vaier's own access check), and is proxied over WireGuard to the container running on a peer.
 
 ---
 
 ## Adding a VPN peer
 
-In the **Explorer**, choose **Add a machine**. It asks what you are adding and generates the rest (address, keys, config):
+Add a peer from the **Explorer** — **Add a machine**, which asks *what you are adding* in everyday words and generates everything else (tunnel address, keys, config); you never pick a raw routing type. Two of its three answers are peers (the third, *Something already on one of my networks*, is the [LAN scanner](#lan-servers-and-the-lan-scanner)):
 
-- **A server or PC that should join** — give it a **name**, then run the one-line setup shown in the **handoff**.
-- **A phone or computer I carry** — an Android phone or Windows PC joins through the **Vaier app**. See [Enrolment from the Vaier app](#enrolment-from-the-vaier-app).
-- **Something already on one of my networks** — see [LAN servers](#lan-servers-and-the-lan-scanner).
+- **A server or PC that should join** (runs around the clock, can host services — a split-tunnel peer that can route its LAN) goes straight to its **name**, the one thing Vaier can't generate, and then the **handoff**: the setup, shown once, with the one line to run on the machine.
+- **A phone or computer I carry** (an Android phone or a Windows PC that needs to reach the fleet — a full-tunnel client) is offered first, and opens **Add a phone or computer**, which says how it joins instead: on the device, open your Vaier's address and install the **Vaier app** from the card in **Your services**, join from the app to get a four-digit code, and approve it under **Waiting to join** on the fleet page. See [Enrolment from the Vaier app](#enrolment-from-the-vaier-app).
 
-| What | Default routing | Handoff |
-|------|-----------------|---------|
-| A server | VPN subnet only | A **no-sudo setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container (Docker only, no root). The link is single-use and short-lived |
-| An Android phone or Windows PC | All traffic | The Vaier app and a join code — Vaier makes no config |
+| What | Peer type | Default routing | Handoff |
+|------|-----------|-----------------|---------|
+| A server | Ubuntu server | VPN subnet only | **No-sudo setup link** — log in as yourself, paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line, and it pulls the config and starts WireGuard in a container (Docker only, no root); the link is single-use and short-lived. Copying the `vaier-up.sh` script by hand stays as a fallback, plus the docker-compose download |
+| A personal device — Android | Mobile client | All traffic | The Vaier app and a join code — Vaier makes no config |
+| A personal device — Windows PC | Windows client | All traffic | The Vaier app and a join code — Vaier makes no config |
 
-The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it.
+**Only Vaier's own clients join as personal devices.** A phone or a Windows PC joins only through the Vaier app, with a key it makes itself; Vaier refuses to create, reissue or regenerate a config for one, and every config download refuses it. There is no QR code and no WireGuard-app route any more. A personal device added the old way, with a key Vaier minted, keeps working — it just gets nothing new; to change its key, remove it and join again from the app. A server always runs Vaier's own WireGuard client in Docker, so there is no separate Windows server type: a peer stored as one reads as an Ubuntu server.
 
-Things worth knowing:
+A server's handoff is shown **once**, in the same modal, with a live "waiting for first handshake — turns green on its own" indicator. A server's routed LAN isn't asked here — set it later from the machine's pane once the peer is up. When you do, you're never asked for a CIDR: Vaier reads the network the machine sits on — over the SSH connection it already has — and asks only whether the fleet should reach it, naming the machine and the interface it read it from.
 
-- **A full-tunnel client can't reach the LAN it is sitting on.** Its kill-switch drops that traffic. At home you don't need the tunnel for it; away, the same address works through the tunnel.
-- **Setup scripts refuse to run on the wrong machine** — for example a Vaier server, or a host that would lose its own uplink. A machine is a peer *or* a LAN server, never both. Re-run with `VAIER_FORCE=1` if you truly mean it.
-- **A relay set up before 23 September 2026 needs its setup link re-run** to survive Docker daemon restarts and carry long replies from tiny devices.
+**A full-tunnel client can't reach a LAN it is sitting on.** A personal device routes *all traffic* into the tunnel, and the WireGuard clients pair that with a kill-switch: untunneled traffic is blocked outright. But the operating system still prefers its own on-link route for the local subnet, so packets aimed at a machine on the network the device is physically plugged into leave *outside* the tunnel — and the kill-switch drops them. The device reaches the whole fleet and loses only the LAN under its feet. On Windows the signature is unmistakable: `tracert` to the local address reports `General failure` on the first hop, meaning the packet never left the machine, where a genuinely unreachable host would time out instead.
+
+There is nothing to fix here, and splitting the tunnel to work around it costs more than it returns: at home you don't need the tunnel to reach your own LAN, and away from home there is no competing on-link route, so the same address works straight through the tunnel. Adding the local subnet to a client's `AllowedIPs` also collides with the on-link route at the same prefix length, which tends to hairpin local traffic out to the Vaier server and back.
+
+Every setup script — a peer's or a LAN server's — opens with a **setup-script guard** that refuses to run on the wrong machine. A setup script reconfigures the host it runs on (Docker, network interfaces, firewall) and arrives as a one-liner you paste into a terminal, so the guard checks five things before touching anything: that the host isn't a Vaier server, that it isn't already set up as a *different* machine (each completed run records its name at `/etc/vaier/machine`), that none of the networks the script would route into the tunnel is the one the host is reachable on — which would cut it off from its own gateway — where Vaier knows the machine's address, that the host actually holds it — and, for a LAN server's relay routes, that the host isn't also running a WireGuard client. A machine is a peer *or* a LAN server, never both: the route to the VPN subnet a LAN server needs is exactly the one `wg-quick` then fails to add, and it tears the tunnel down on every boot while the container still reads as running. A refusal prints what it refused and why, changes nothing, and exits 3. If you truly mean it, re-run with `VAIER_FORCE=1`.
+
+A peer's setup script runs `wireguard-client` with **host networking**, so a relay's `wg0` lives in the host's own network namespace and stays up while the container is replaced. The flip side is that a Docker daemon restart — a snap refresh, an apt upgrade, a crash — kills the container without `wg-quick down`, the interface outlives it, and a restarted `wg-quick` refuses to start over an interface that already exists; the image then tears the surviving tunnel down and sits idle, so the peer is dark until someone reboots it. The script therefore installs a one-line custom-init script (`wireguard-client/custom-cont-init.d/10-clear-stale-wg0`, root-owned, as the image requires) that deletes a stale `wg0` before every tunnel start, and mounts it into the container. Peers set up before 2026-09-21 lack it: re-run the setup link, or drop the file in by hand and add the mount.
+
+A relay also has to carry the replies of devices with very small network stacks — an OpenSprinkler, say — that ignore both the packet size the connection asks for and the relay's "too big" answer. Such a device sends full LAN-sized packets marked *don't fragment*, which cannot fit the tunnel, so anything longer than one packet (a controller's log view) never arrives while short answers work. The relay's setup script therefore clears *don't fragment* on replies coming back from its LAN (an `nft` table named `vaier-relay`, re-applied on every boot), letting the relay split them; the pieces travel inside the encrypted tunnel and are joined again at the hub, so the internet path never sees fragments. Relays set up before 2026-09-23 lack it: re-run the setup link.
 
 ### Site-to-site routing
 
-With two or more relay peers, a machine on one site's LAN can reach a machine on another's, through both relays and the Vaier server. The far host sees the relay as the sender and needs no configuration. A LAN host that should *start* such connections needs the [LAN setup script](#lan-servers-and-the-lan-scanner).
+With two or more relay peers, a machine on one site's LAN can reach a machine on another's — a host at home in Norway talking to one in Spain. The path runs from the near relay, through the tunnel to the Vaier server, which already passes relay-to-relay traffic without rewriting its source, and out the far relay onto its LAN. Two things make that work:
 
-**Adding, removing or re-addressing a relay makes every other server peer's config out of date.** On each relay, **Reissue** and run the setup link again. The keypair is kept.
+- **Every server peer's config lists the other relays' LANs.** Its tunnel `AllowedIPs` carries the VPN subnet, the server LAN CIDR, and every **sibling relay LAN** — each relay's LAN except its own. That one line does two jobs: it gives the peer a route into the tunnel for those networks, and it lets WireGuard accept the replies, which arrive from those same addresses. A LAN the peer itself sits on is never listed — neither one overlapping its own LAN nor one holding its LAN address — since routing it into the tunnel would cut the machine off from its own network. Where Vaier knows neither, the LAN is listed, and the setup-script guard still refuses a host that would lose its uplink. Personal devices already send everything through the tunnel and are unchanged.
+- **Each relay forwards whatever its tunnel carries.** Its setup script accepts and masquerades traffic into its LAN from exactly the networks in its own `AllowedIPs`, and accepts traffic from its LAN out to them, so the relay's LAN hosts can start connections too, not only answer them. The rules are re-applied on every boot, like the rest of the relay's.
 
-### Names, descriptions and status
+The far relay **masquerades**: to a host on its LAN, traffic from another site appears to come from the relay itself, so that host needs no route and no configuration at all. The cost is that the host never sees the real address of the machine talking to it. A LAN host that should *start* connections to another site still needs a route to it through its own relay, which the [LAN setup script](#lan-servers-and-the-lan-scanner) installs.
 
-- **Edit details** sets a machine's name and **description**. Renaming breaks nothing, and names **do not have to be unique**.
-- An amber icon means reachable but the Docker scrape failed; red means unreachable.
-- The **Map** shows one marker per site. Phones and laptops are never placed on it.
+**Adding, removing or re-addressing a relay changes every other server peer's config.** Vaier marks those configs **out of date** (the peer list's `configOutOfDate`, which no screen shows yet). On each relay, **Reissue** its config and run the setup link it hands back: the script writes the new `AllowedIPs` and the matching forwarding rules in one go, keeping the keypair, so the tunnel is not re-keyed. The script is a full setup run, restarting Docker and the `wireguard-client` container. For a relay whose only change is a new sibling, editing `AllowedIPs` in `~/vaier/wireguard-client/config/wg_confs/wg0.conf` by hand and restarting `wireguard-client` is enough for the routes, but not for the forwarding rules.
+
+Each machine — VPN peer or LAN server — can carry an optional **description**, a free-text note (e.g. "Home media server (NUC, Ubuntu 22.04)") set on the Add Machine form and editable from the machine's **Edit details** dialog in the **Explorer**. It shows as a muted subtitle under the machine name so its purpose is obvious at a glance.
+
+Peers and LAN servers can be **renamed** in place — open the machine's **Edit details** dialog in the **Explorer** and edit the **Name** field. A peer's **name** is just a display label: editing it leaves the peer's underlying id (its config directory, REST paths, and routing) untouched, so the live tunnel and any published services keep working. The id is the slug Vaier derives from the name you first typed; the name is then yours to change freely. Names **do not have to be unique**: two machines may wear the same one, because Vaier identifies every machine by an opaque **machine id** and nothing at all is keyed to the label. Call the box in each house "NAS" if that is what you call them — their credentials, backups, disk watches and shells stay entirely separate. Clearing a peer's name reverts it to the humanised id.
+
+Every machine carries a **status colour** on its icon in the **Explorer** tree, and only where there is trouble to carry: amber (reachable but the Docker scrape failed) and red (unreachable). Reachable-and-well, and not-yet-probed, both draw nothing. (An earlier version of this file described a hover tooltip giving the state in words with its evidence. No such tooltip was ever built — see the PRD backlog, where it is now more useful than it was, since the quiet states no longer say anything for themselves.)
+
+The fleet's machines live as entries in the **Explorer** tree; a **Map** entry at the fleet root draws one marker per site — the Vaier server and each fixed-line peer, with the machines behind it — joined to the server by its tunnel. Phones and laptops are never placed on it.
+
+After creating a server peer, run its setup link on the machine. Vaier shows the peer's handshake status.
 
 ### Show-once peer config
 
-A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the pane offers under **Keys and removal**:
+The WireGuard config for a peer is delivered **exactly once**, at create time: the create-success modal shows the config text and download buttons for `.conf` / `docker-compose.yml` / setup script. Save what you need before closing the modal — the four secret-bearing endpoints (`/config`, `/config-file`, `/docker-compose`, `/setup-script`) return `410 Gone` once the budget is burned. A personal device has no such config at all: those endpoints refuse it without spending the budget.
 
-- **Send its setup again** (Reissue) — keeps the keypair. Use it for a lost config or an ⚠ **out-of-date config** badge.
-- **Give it new keys** (Regenerate) — rotates the keypair; the old config stops working at once.
+To get a fresh config for an existing server peer, the machine's pane in the **Explorer** offers two actions (folded under **Keys and removal**):
+
+- **Send its setup again** (Reissue) — re-renders the config from the *current* generation logic while **keeping the peer's keypair**, then re-opens the one-shot delivery. Use this to **recover a lost config** without disrupting the tunnel — the keys are preserved, though the re-rendered contents may differ from the original (e.g. updated `AllowedIPs`) — or to refresh one that's gone **out of date** because what Vaier would generate now no longer matches the installed config (the machine's pane shows a ⚠ **out-of-date config** badge). The live tunnel keeps working; reinstall the reissued config on the peer machine to apply it.
+- **Give it new keys** (Regenerate) — deletes and recreates the peer with the same name, **rotating the keypair** as a side effect. Use this if the key may be compromised; the old config stops working immediately.
+
+Neither is offered for a personal device, which only ever holds a key it made itself.
+
+Why show-once: WireGuard has no session concept, no server-side revocation, and the same config works on any number of devices. A leaked screenshot or `.conf` would otherwise be a permanent backdoor.
 
 ### Enrolment from the Vaier app
 
-This is the only way a phone or a Windows PC joins.
+This is the only way a phone or a Windows PC joins. A phone running the **Vaier app** never meets the WireGuard app. It makes its own key on the phone and asks to join, showing a four-digit **join code** on screen while it waits — you let it in from wherever you're already signed in, your own laptop or the phone itself, and the moment you do, the phone connects on its own. You don't have to be watching the fleet page to catch it: admins get a mail with the code and the one link that lets it in. The private half of the key never leaves the phone — Vaier only ever sees the public half — so there is no config to save and nothing to download for that phone ever again.
 
-1. On the device, open **Your services** and use the **Install card** — no store, no account. The app already knows your Vaier's address.
-2. In the app, ask to join. It shows a four-digit **join code**.
-3. Approve it under **Waiting to join** on the fleet page, or from the mail admins receive.
+**Get the app from your own Vaier.** Open **Your services** on the phone and an **Install card** offers it — no store and no account. The card appears only on a device that can take the app — an Android phone or a Windows computer — and only when your Vaier is actually carrying a copy. The copy you download has your Vaier's own address written into it, so the app already knows where it came from and never asks you to type one.
 
-The private key never leaves the device, so there is nothing to save.
+**Connect and disconnect from the pull-down shade.** On Android, add the **Vaier** tile to Quick Settings: it is lit while connected, and a tap connects or disconnects without opening the app. It opens the app only for what the shade cannot do — joining, and the one-time VPN consent Android asks for on the first connect.
 
-- **Android:** add the **Vaier** tile to Quick Settings to connect without opening the app.
-- **Windows:** run `VaierSetup.exe` and choose **Install**. The tunnel keeps running with the window closed. If the window says **Vaier is not running**, use **Repair**. The app is not yet signed, so SmartScreen warns on first run.
-- **Leave Vaier** removes the device from the fleet. A device you remove from your end notices on its own within a few minutes.
-- To remove a device, don't do it from a browser on that device — that cuts the tunnel carrying Vaier's answer. Use **Leave Vaier** instead.
+**Leaving is just as self-contained.** The phone removes itself from the fleet for good, not just from that handset. A phone you remove from the fleet notices on its own, too: it goes quiet, checks in over ordinary internet a few minutes later, and if it's no longer wanted it forgets itself, tells whoever's holding it, and offers to join again — you never have to touch the handset yourself.
+
+**On a Windows computer, too.** The Vaier app for Windows joins the same way: give it a name for the computer and it shows the same join code. The fleet page and the approval dialog call it a computer, with a laptop icon, and it joins as a Windows client. Get it from **Your services** on the computer itself: on a Windows browser the **Install card** offers a **Download** of `VaierSetup.exe` with your Vaier's address already written into it, so there is nothing to type. Run it and choose **Install**: it installs itself into Program Files, adds a Start menu entry and appears in Apps & features. Running a newer `VaierSetup.exe` offers **Update**, which keeps the computer joined; **Uninstall** (from the app or Apps & features) leaves the fleet first, then removes everything. It is self-contained (about 54 MB), so no .NET runtime needs installing first. It runs the tunnel with WireGuard's own signed driver, as a Windows service, so the tunnel keeps running with the window closed and comes back when Windows starts; the app's Connect and Disconnect switch it. The private key lives in `C:\ProgramData\Vaier\Vaier.conf`, in a folder only SYSTEM and Administrators can read.
+
+**The app opens without administrator rights.** Everything privileged — joining, the private key, Connect and Disconnect, Leave, the handshake and traffic figures, and the removal watch below — lives in a small Windows service called **Vaier**, the **manager service**, which runs as SYSTEM and starts with Windows. The window and the tray icon talk to it over a local channel that only SYSTEM, Administrators and people signed in at the computer may open. So joining keeps going with the window closed — the service holds the join code — and only Install, Update, Uninstall and **Repair** ask for administrator rights, one prompt each. If the service is missing, the window says **Vaier is not running** and offers Repair. The manager also keeps the tunnel as you left it: Connect, Disconnect and joining record whether you want it on, and after an update, a repair or a restart it puts it back that way.
+
+**A tray icon starts with every sign-in.** It shows the Vaier mark, lit amber while connected and dim otherwise, and its tooltip says where things stand. Click it to open the window; right-click for **Open Vaier** and **Connect** or **Disconnect**. Starting Vaier again from the Start menu brings the running window forward rather than opening a second one.
+
+**Leave Vaier** sits in the app's ⋯ menu and works as it does on the phone: the tunnel goes down first, then the computer takes itself out of the fleet. A computer you remove from your end notices on its own, too. The manager service watches the tunnel; after three minutes without a handshake (and at most once every five minutes) it takes the tunnel down, asks your Vaier over ordinary internet whether this computer is still a member, and either puts the tunnel back or forgets the membership and says so in a Windows notification, which the window repeats the next time it opens. Opening the window with the tunnel off asks once, too. The question needs the tunnel down because a laptop routing all its traffic through the tunnel, behind WireGuard's kill switch, can reach nothing else — so a removed laptop sits offline for roughly four to five minutes before it notices, and that is why the watch is a service of its own rather than part of the tunnel.
+
+**Connecting and disconnecting show at once.** WireGuard never says hello or goodbye: a device normally reads as connected for up to three minutes after its last handshake, and a fresh connect waits for Vaier's next look at the tunnel, up to ten seconds. The Vaier app says both itself, through the tunnel. When you disconnect on purpose — the switch or the Quick Settings tile on Android, Disconnect on Windows — the app sends a **goodbye** just *before* it takes the tunnel down (waiting at most two seconds, then disconnecting regardless), and the fleet shows it disconnected straight away. Right after it connects it sends a **hello** — at once on Android, after the first handshake on Windows (at most five seconds) — and Vaier reads the tunnel afresh and shows it connected within about a second. Both carry the same proof as Leave, because Vaier cannot see which device is talking: the WireGuard container masquerades tunnel traffic, so every device arrives from the same address.
+
+They go to a **tunnel door**: a Traefik entrypoint on port 8090 of Vaier's internal network (Traefik is pinned at `172.20.0.251` so the apps can name it), with no host port, so it answers only what arrives through WireGuard and never the internet. It carries those two messages and nothing else, behind the CrowdSec bouncer and a rate limit of its own; the public enrolment router does not carry them. It is best-effort: Leave, the removal watch, a Windows shutdown or uninstall send no goodbye, a device that simply drops off (lost signal, a flat battery) or a peer not running a Vaier app still takes the three minutes, and so does every device for a while after Vaier restarts, since goodbyes are held only in memory. It needs Android app 0.8 or Windows app 0.6.2.
+
+Removing a machine from a browser running on that same machine cuts the tunnel carrying Vaier's answer, so the fleet page tries to stop you — but it can only be exact when Vaier sees the request arrive from that machine's tunnel address. When it does, a device that joined through the Vaier app gets no **Remove** at all — the page points you to **Leave Vaier** in the app, which disconnects first — and Vaier refuses such a removal if one arrives anyway; any other machine — a server, or a personal device added before the Vaier app, with a key Vaier minted — keeps **Remove**, and the confirmation says the browser loses Vaier at once and to turn its tunnel off afterwards.
+
+Today a device that routes all its traffic through Vaier (a phone or a Windows computer) usually reaches Vaier's own page the long way round: the request leaves the server for Vaier's public address and comes back in wearing that address, not the device's tunnel address. Vaier can then tell only that the browser sits behind *some* such device, not which one. In that case every machine keeps **Remove**, and removing a Vaier-app device adds a warning to the confirmation: if you are using it right now, use **Leave Vaier** in its app instead.
+
+The Windows app is not yet signed, so Windows SmartScreen warns before the first run.
+
+*Presence from the app and key rotation are still to come.*
 
 ### Fleet DNS
 
-Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tunnel. Its own password is off, so publish its admin page only behind social login, never as public. Through the tunnel a device reaches only that DNS and Vaier's published addresses — never the containers of Vaier's own stack directly.
+Every personal device's config — from the Vaier app, or from a show-once download for one added before it — names `DNS = 172.20.0.53`: **Pi-hole**, which is part of Vaier's own stack. Server peers get no DNS line; they keep their own resolver, since they only send the fleet's addresses into the tunnel.
+
+Pi-hole sits at that fixed address on Vaier's internal network and publishes no host port, so it answers only what arrives through the tunnel — never the internet. Its data lives in `./pihole/` in your install directory. Before it shipped with Vaier it was a stack you ran yourself, and a fresh install without one left every phone and laptop with a tunnel and no working DNS.
+
+Its admin UI is offered for publishing like Traefik's dashboard (see [Publishing a service](#publishing-a-service)). Pi-hole's own password is switched off, because social login in front of it is the gate — so don't publish it as public. Its image is pinned and moves with a Vaier release, like the rest of Vaier's own stack.
 
 ---
 
 ## LAN servers and the LAN scanner
 
-**LAN servers** — a NAS, printer, IPMI host, or extra Docker host on a peer's LAN — need only a LAN address.
+**LAN servers** (a NAS, printer, IPMI host, or an extra Docker host on a peer's LAN or in the Vaier server's own subnet) are added from **Add Machine** in the **Explorer** — Vaier only needs the host's LAN address.
 
-1. In **Add a machine**, pick *Something already on one of my networks*.
-2. Pick **where it is** (**At <name>**) and Vaier scans that LAN.
-3. Pick a host and type a name. If it speaks SSH, attach and **test** a credential.
+**Add a machine** asks what you are adding. Pick *Something already on one of my networks* and Vaier first asks **where it is** — a list of the networks it can reach, each said as **At <name>** (every relay site, plus the Vaier server's own LAN; the address range is not shown). Pick one and Vaier scans **just that LAN**, so the page stays small and the sweep is quick; the hosts it already found there show **instantly** (the last scan is cached, and a fresh one arrives live — no waiting, no polling). Pick a host and **adopt** it in a single call: the only thing you type is the name, over a read-only *Vaier found these* readout of what the scan already knows — what it is, where, its address, and whether Vaier can see its apps (an open Docker port). **When the host actually speaks SSH**, you can attach an SSH credential as you adopt and **test** it first — Vaier opens a throwaway connection to prove the login works (and never stores one it couldn't verify), all without echoing the secret; a host that doesn't answer on SSH is adopted without one. Already-registered machines are filtered out, so only new hosts appear.
 
-If the scan finds nothing, use **Add by address instead**.
+On an empty scan (or a LAN Vaier can't reach) an **Add by address instead** fallback still registers a LAN server by hand — and it's the same experience, only you type the address instead of picking it: Vaier **probes the address you type** (a targeted, single-host check — it only inspects the one host you named) and prefills the same *Detected by Vaier* readout, including a **Test connection** SSH credential you can attach as you add whenever the host answers on SSH. Detection never blocks the add — a host that doesn't answer is still added by hand.
 
-Then run the host's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
+Whether you pick a scanned host or type its address by hand, Vaier **probes the host** and prefills what it detects (Docker port, device category), and lets you attach and **test** an SSH credential right there when the host answers on SSH — so the by-hand path is the same experience as adopting a scanned one. After adopting, the Explorer hands you a copyable **setup link** — a `curl -fsSL '…/lan-servers/<name>/setup?t=<token>' | sudo bash` one-liner, shown in the adopt dialog and on the machine's **Setup script** control — that the host runs to pull and run its setup script over HTTPS (needs `sudo`, since it installs Docker). Like the peer setup link it's single-use and short-lived; a bare host has no sign-in session, so a single-use **setup token** stands in for one (the by-hand `setup.sh` download stays as a fallback). The script adapts to what the host needs: it opens the Docker engine API (if you marked it as running Docker — native and snap installs covered), **locks that API to the fleet** (it's unauthenticated, so the script firewalls it to only the relay gateway your Vaier traffic actually arrives from and drops it from everyone else, installed as a systemd service so it survives reboots), and installs persistent routes to the Vaier server's subnet (and other sites' LANs) via the host's relay peer, so a machine behind one relay can reach the rest of your Vaier network. It's idempotent and safe to re-run — a host with nothing to set up is simply left as-is.
 
-For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCED.md).
+For registering LAN servers from non-peer machines and the V1 routing limitations that come with it, see [`docs/ADVANCED.md`](ADVANCED.md).
 
 ---
 
 ## Publishing a service
 
 1. Start a Docker container on any connected peer.
-2. In the **Explorer**, open the peer's pane; the container shows as a **+ Publish** row.
-3. Click it, enter a subdomain, and optionally require Social login.
-4. Vaier writes the route. There is no DNS step.
+2. In Vaier's **Explorer**, open the peer's pane; the container appears as a **+ Publish** row among its services.
+3. Click it, enter a subdomain, optionally require Social login (Google sign-in).
+4. Vaier writes the Traefik route and (optionally) the social-login middleware chain. No DNS step — the name already resolves under your wildcard record.
 
 The service is live at `https://subdomain.yourdomain.com`.
 
-- Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
-- **Ignore** hides a **+ Publish** row.
-- A LAN server behind a relay has a **Publish LAN port** form.
-- On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login.
+A machine's **published services** are child entries under it in the **Explorer** tree: open one to edit its authentication, display name, allowed groups, and advanced options, or to **Unpublish** it. The machine's discovered-but-unpublished containers appear as **+ Publish** rows that open the publish flow pre-filled, each with an **Ignore** button to hide it (a machine with ignored candidates shows a collapsible "N hidden" line to reveal and **Unignore** them); a relay-anchored LAN server adds a **Publish LAN port** form for publishing a bare host:port (port + protocol + subdomain). Every publish runs as a non-blocking **progress card** for the one step there is — reverse-proxy routing — turning green on success or red on rollback, and rebuilt from the server on reload so a refresh never loses an in-flight publish. Unpublishing asks for confirmation and tears down the Traefik route while leaving the container running; DNS is untouched, since the name resolves under your wildcard record either way.
 
-For auth modes and who can reach a service, see [`docs/AUTH.md`](AUTH.md).
+On the **Vaier server** itself, the containers of Vaier's own stack are not offered as candidates — the console, Traefik, WireGuard, oauth2-proxy, Dex, CrowdSec, the Docker socket proxy, the offline page and their sidecars are Vaier's plumbing, and the socket proxy in particular serves the Docker API, which is not something to put behind a public hostname. Your own containers on that host are discovered exactly as they are anywhere else. The deliberate exceptions are **Traefik's dashboard** on port 8080 and **Pi-hole's admin** on port 80, which appear as candidates with a `/dashboard/` or `/admin` redirect already filled in: publish them if you want them, on the hostname you choose and — the sane choice — behind social login. Pi-hole's DNS port is never offered: it serves the fleet through the tunnel (see [Fleet DNS](#fleet-dns)).
+
+For per-service auth mode and access rules (who can reach a Social-login service), see [`docs/AUTH.md`](AUTH.md).
 
 ### Multiple services on one subdomain
 
-Set a **Path prefix** (e.g. `/auth`) to share one subdomain. The full path reaches the backend unchanged:
+Set an optional **Path prefix** at publish time (e.g. `/auth`) to put more than one service behind a single subdomain. Traefik routes by `Host(...) && PathPrefix(...)`, picks the more-specific rule first, and forwards the full path unchanged to the backend:
 
 ```
 bmp.yourdomain.com         →  http://rig.yourdomain.com:8080
 bmp.yourdomain.com/auth/*  →  http://rig.yourdomain.com:8090/auth/*
 ```
 
+(`/auth` reaches the backend intact — Vaier doesn't strip the prefix.)
+
+Siblings on one host are independent: each is published and unpublished on its own, and removing one never affects another. There is no shared DNS record to keep track of — the host name resolves under your wildcard record whether one route sits on it or five.
+
+For publishing services from non-peer LAN machines (NAS, printers, extra Docker hosts), see [`docs/ADVANCED.md`](ADVANCED.md).
+
 ### Publishing a port that is not a website
 
-Choose **raw TCP** instead of **website** to publish a **stream**: clients connect over TLS to e.g. `mqtt.example.com:443`. The port you enter is the backend port.
+When you publish, you say whether the port serves a **website** or **raw TCP**. Either way the port you enter is the *backend* port — the port Traefik connects to on the machine — and never the port clients connect on: every published route is bound to the `websecure` entrypoint, so visitors always arrive on 443.
 
-**A stream cannot be put behind a login, and CrowdSec does not watch it.** Publish one only for a service whose own password you trust. If the client can't speak TLS, reach the service over the VPN at its LAN address instead.
+A raw-TCP port is published as a **stream**. Vaier writes a Traefik TCP router matched by `HostSNI(...)` on that same 443 entrypoint, with the same Let's Encrypt resolver — Traefik issues the hostname's certificate through the HTTP-01 challenge on port 80 exactly as it does for an HTTP router. It terminates TLS, then forwards the decrypted bytes to the backend port unchanged. Clients connect to `mqtt.example.com:443` over TLS and speak MQTT, or Postgres, or whatever the service speaks. Many streams share the one entrypoint, because `HostSNI` reads the name out of the TLS handshake — so a stream is the same hot file write every other publish is: no compose edit, no new host port, no Traefik restart, no firewall rule.
+
+**A stream cannot be put behind a login, and CrowdSec does not watch it.** Nothing inside a TCP stream is an HTTP request, so there is no request for oauth2-proxy to redirect to Google and none for the CrowdSec bouncer to inspect — both are Traefik HTTP middlewares, and a TCP router takes no middlewares at all. Vaier refuses social login on a stream rather than showing a padlock over an open door. The service's own credentials are the only gate, so publish a stream only for a service whose own authentication you trust, and give it a real password.
+
+A stream also has no URL: it takes no path prefix (`HostSNI` matches the host and nothing else), no root redirect, and it never gets a tile in Your services. Its pane shows the address to dial instead.
+
+If the client cannot speak TLS, the VPN is still the answer. Reach the service over the tunnel at the machine's LAN address and its real port: a LAN server behind a relay peer is reachable from every connected peer, so `192.168.x.y:6690` works from anywhere on the fleet — no port exposed to the internet, and the transport is already encrypted by WireGuard, so the service's own TLS can usually be turned off.
 
 ---
 
 ## Your services
 
-A public page that links to your published services, switching to LAN URLs when you're on the same network. Strangers see only public services. Signed-in users also see the social-login services they may reach; admins see all.
+A public, **viewer-adaptive** page (still at `/launchpad.html`) that links to your published services, switching to direct LAN URLs when you're on the same network. A logged-out visitor sees only your public services; sign in and it additionally shows every social-login service that identity is allowed to reach (admins see all) — so internal URLs never leak to strangers, while admin pages stay admin-only.
 
-You can hide internal-only services. A red dot means the host is confirmed unreachable.
+Tiles show the path segment (for path-based routes) or the subdomain, with an optional operator-supplied display name. A service's Docker image and version show in its Explorer pane, not on the tile — point a service at a version endpoint so one running natively on a LAN machine reports its version too. Hide internal-only services per route, and spot trouble at a glance — a tile wears a red "host offline" dot only when its hosting machine is confirmed unreachable (VPN handshake age or LAN reachability probe); a reachable host, and one still being probed just after startup, paint nothing. Vaier's own infrastructure hosts (the console, oauth2-proxy, and the Dex broker) are never listed as tiles.
 
 ---
 
 ## Reverse proxy
 
-Each service has an **auth mode** (public or **Social login**). When a backend is down, visitors see Vaier's **offline page**.
+Traefik dynamic config generated automatically, with a per-service **auth mode** (public or **Social login** — Google or GitHub via oauth2-proxy, with Vaier deciding who's approved) and root-path redirect. When a service's backend is down, visitors get Vaier's branded **offline page** (naming the service, with a retry and a link back to Vaier) instead of Traefik's bare gateway error. A standalone page server stands in even when **Vaier itself** is down, so the control panel host shows the branded page rather than "Bad gateway".
 
 ## Edge hardening
 
-Traefik adds a baseline to every response:
+Traefik enforces a baseline on every response it serves, whatever the backend does or forgets to do. Two **security headers** — `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` — ride the HTTPS entry point itself, so they reach Vaier's own pages and every **published service** alike, including ones published long before this existed. A **frame guard** (`X-Frame-Options: SAMEORIGIN`) is deliberately *not* fleet-wide — it goes on Vaier's own surfaces only, because a published app may legitimately embed or be embedded and Vaier would break it silently and at scale. `Content-Security-Policy` is left to the application: Vaier's own file viewer already serves each previewed file under a tight per-type policy, and a policy imposed at the edge would either overwrite that or intersect with it. The **edge TLS policy** puts a floor under the handshake — TLS 1.2 minimum, forward-secret AEAD cipher suites only, so no CBC, RC4, 3DES or static-RSA key exchange — for every route without touching a single route definition. Certificate issuance is untouched: the Let's Encrypt HTTP-01 challenge is served over plain HTTP.
 
-- `nosniff` and `strict-origin-when-cross-origin` **security headers** on every service; a **frame guard** on Vaier's own pages only.
-- An **edge TLS policy**: TLS 1.2 minimum, forward-secret ciphers only.
+A CrowdSec Security Engine and bouncer block traffic already recognised as malicious (probing for `.env` files, WordPress admin paths, known CVEs, and more) before it reaches oauth2-proxy or any backend. The bouncer goes first on every route — each **published service**, whatever its auth mode, and the Vaier app's anonymous join routes. Your own VPN and LAN traffic — the **trusted networks** — is never subject to a block decision.
 
-**CrowdSec** blocks known-malicious traffic, including addresses from its **community blocklist**, on every **published service**. Your **trusted networks** are never blocked. A first ban lasts four hours; repeat bans run longer.
+The bouncer is Traefik's own CrowdSec plugin, running in *stream* mode: it pulls the current block list from the Security Engine once a minute and answers every request from memory, so the check costs nothing you can measure. It used to be a separate container that asked the engine about each request; under a page load's burst of sixty requests that engine, a SQLite database on a small host, serialised to a second per request, and the whole domain felt slow, published services included. Should the engine become unreachable, the last list stays in force rather than every route being turned away — the engine's detection is down then too, so nothing new could have been banned. At start-up Traefik still waits for the first list before serving anything, so a broken engine or a blank bouncer key stops the stack the same way as before, by name, at config-parse time.
 
-The Explorer's **Security** view lists every blocked address. Each row's **…** menu offers **Lift the block** and **Trust this address**. **Block an address** bans one by hand for up to 7 days.
+Every address currently blocked is listed in the Explorer's **Security** view, live, as a sentence: what it tried in plain words (read off the scenario that caught it), the country it came from — Vaier's own geolocation database, the same one that places sites on the Map, with CrowdSec's own placement only as a fallback — the address, and how long the block has left. The scenario and the network operator ride along as tooltips. It is drawn on the fleet's **Map** as well when the address can be placed. Each row's **…** menu carries the two things you can do about it: **Lift the block** lets that address back in now (one-off — the next scenario it trips blocks it again), and **Trust this address** says never block it again, folding it into your **trusted networks** as a single host.
 
-**Caveat:** trusting lifts the block at once, but the allowlist entry — and any **Untrust** — only takes effect when CrowdSec next restarts. Vaier won't restart it for you.
+The Security view also lists what you have already trusted, with an **Untrust** verb on each — trusting stands until you take it back, and taking it back places no block itself: from there the address is judged by CrowdSec's scenarios again, same as any other. Only the addresses you trusted by hand appear there: the structural parts of your **trusted networks** (your VPN, the container network, the networks behind your machines) are what stop CrowdSec turning away your own traffic, so they are named as covered and never offered for removal.
 
-**If CrowdSec bans your own address**, sign in through the [recovery doors](#the-recovery-doors) and lift the block in the Security view. Your published services refuse you until you do. From the host, `docker exec crowdsec cscli decisions delete --all` clears every block.
+Vaier can also ban an address CrowdSec hasn't caught: a separate **Block an address** control runs `cscli decisions add` (the mirror of the `cscli decisions delete` behind **Lift the block**) with an operator-chosen duration — 1, 4 (the default) or 24 hours, or 7 days, deliberately never permanent — and a reason marker naming the admin who placed it, so the block shows in the same list as CrowdSec's own decisions but reads "blocked by you". Vaier refuses to place one on an address inside your own trusted networks or the one you're asking from right now, and a hand block never counts toward a breach-attempt mail — it's a decision you made, not an attack. It expires and CrowdSec forgets it on its own like every other decision here.
+
+Vaier does not record where the people it lets in come from. The only thing an allowed request leaves behind is, for a machine on the tunnel, the service it last reached.
+
+One honest caveat, and it cuts both ways: CrowdSec re-reads its allowlist only when it restarts. So trusting an address lifts its block immediately, but the allowlist entry itself takes effect at CrowdSec's next restart — and an untrust likewise doesn't reach CrowdSec until then. Vaier deliberately won't restart the engine for you — bouncing the thing guarding the door is how an operator ends up locked out. If CrowdSec bans your own address, sign in as usual through the [recovery doors](#the-recovery-doors) and lift the block in the Security view. Your published services refuse you until you do, but the console does not. From the host's shell, `docker exec crowdsec cscli decisions delete --all` clears every active block as well.
 
 ---
 
 ### The recovery doors
 
-`vaier.<domain>`, `oauth2.<domain>` and `dex.<domain>` are the **recovery doors**: a CrowdSec ban does not apply to them, so it can't lock you out of the console that lifts it. They still require sign-in and admin approval.
+A banned address can still reach Vaier's own sign-in path: the console on `vaier.<domain>`, and `oauth2.<domain>` and `dex.<domain>`, which every sign-in passes through. These are the **recovery doors**, and the bouncer does not judge them. The reason is an ordinary outage: a broken stack answers every request with an error, a page reloaded while you watch it fail looks like probing, and CrowdSec bans the operator mid-session. With the bouncer on the console too, the Security view that lifts the ban sat behind the ban, and the only way back in was a shell on the host.
+
+Nothing is opened by this. The console is still behind oauth2-proxy and Vaier's own admin approval: a banned stranger reaching a recovery door meets the sign-in page and gets no further. Detection is unchanged too. CrowdSec still reads every request from the access log, including those to the recovery doors, and still bans; a banned address is still refused by every published service. Only enforcement stops at the doors. The Vaier app's join and leave routes on the same host are anonymous and are not part of signing in, so they keep the bouncer.
+
+How it is wired: the bouncer used to ride the HTTPS entry point, and Traefik cannot take an entry-point middleware off a single route. So it now rides each route. Vaier's own routes name it in `docker-compose.yml`, and Vaier puts it first on every route it writes to its generated file. At startup Vaier also adds it to routes published before this change, so nothing has to be republished. A **stream** is outside the bouncer entirely, as it always was. The bouncer is an HTTP middleware, and a TCP route takes none, so moving it off the entry point changed nothing for a stream (see [a port that is not a website](#publishing-a-port-that-is-not-a-website)).
 
 ## Wildcard DNS
 
-DNS is one record you make once, at your DNS host:
+DNS is one record you make once, at whatever DNS host your domain lives on: `*.yourdomain.com  A  <your server's public IP>`. Vaier never touches DNS after that — publishing a service writes a Traefik route and nothing else, so a service is live as soon as the route is up. At boot Vaier **checks** the record for you (it looks up a random name under your domain on a public resolver and compares the answer with this server's own public IP) and says in plain words whether it's covered, not resolving, pointing somewhere else, or unconfirmed — in the boot log. Anything but **covered** is a **pre-flight** finding under **Needs you** on the Fleet; a covered record shows nothing.
 
-```
-*.yourdomain.com  A  <your server's public IP>
-```
+That one record answers for everything: the console at `vaier.yourdomain.com`, the sign-in hosts `oauth2.yourdomain.com` (where oauth2-proxy serves the sign-in flow) and `dex.yourdomain.com` (the Dex identity broker behind it that federates Google and GitHub), and every service you publish from now on. There is nothing to add when you publish a service, and no DNS credentials to give Vaier — any provider that can serve a wildcard `A` record works.
 
-That covers the console, sign-in and every service you publish. Vaier needs no DNS credentials. At boot Vaier checks the record; anything but **covered** shows as a **pre-flight** finding under **Needs you** on the Fleet.
+> **One caveat worth knowing.** Vaier publishes machine-qualified names two labels deep — `openhab.colina27.yourdomain.com`. A DNS wildcard only covers a name while nothing more specific claims a label above it, so the moment your zone gains a real record *under a machine label* (say an `A` record for `colina27.yourdomain.com`), `*.yourdomain.com` stops covering everything beneath `colina27` and that machine's services go dark. Keep the zone free of records under a machine label, or add a `*.colina27.yourdomain.com` wildcard alongside it.
 
-> **One caveat worth knowing.** Vaier publishes machine-qualified names two labels deep — `openhab.colina27.yourdomain.com`. If your zone gains a real record *under a machine label* (say an `A` record for `colina27.yourdomain.com`), `*.yourdomain.com` stops covering everything beneath `colina27` and that machine's services go dark. Keep the zone free of records under a machine label, or add a `*.colina27.yourdomain.com` wildcard alongside it.
+Vaier checks this for you at every boot: it looks up a random two-label name under your domain on a public resolver (`1.1.1.1`, `8.8.8.8`) and compares the answer with this server's own public IP, then states the verdict — **covered**, **not resolving**, **resolves elsewhere**, or **unconfirmed** — in the boot log and in **Settings**.
 
-Certificates are still issued one per hostname; the record is not a wildcard certificate.
+Traefik holds its first Let's Encrypt request until the three infrastructure hostnames it needs (`vaier`, `oauth2`, `dex`) actually resolve on a public resolver. **A wildcard record satisfies that wait immediately** — the names resolve the moment the record exists, which is before you ever run `docker compose up`. The wait stays in place as a safety net: it is what makes the stack come up with real certificates on the first try instead of asking Let's Encrypt before the names resolve, tripping its "5 failed authorizations per hostname per hour" limit and stranding the site on Traefik's self-signed default cert for an hour. It fails open after a few minutes, so a missing wildcard record never leaves the box without a reverse proxy forever.
+
+Certificates themselves are unchanged: Let's Encrypt still issues one per hostname over the HTTP-01 challenge. The wildcard record only makes a name *resolve* — it is not a wildcard certificate.

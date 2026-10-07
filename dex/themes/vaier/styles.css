@@ -1,24 +1,23 @@
-/* Vaier theme for Dex — the same card as oauth2-proxy's sign_in.html, so a hop through the broker (the
-   first-run password form, the connector picker, an error) reads as one product. Overrides Dex's theme
-   classes; layout classes live in static/main.css. Palette copied from sign_in.html. */
+/* Vaier theme for Dex — matches the branded oauth2-proxy sign-in card (sign_in.html) so the broker's
+   own screens (error, connector picker) read as the same product. Overrides Dex's default theme
+   classes; layout classes live in static/main.css. Dark VS Code palette, cyan accent, mono wordmark. */
 
 :root {
   color-scheme: dark;
-  --bg: #0e1116;
-  --bg-card: #19212c;
-  --bg-input: #0f151d;
-  --border: #263143;
-  --text: #dfe6ef;
-  --text-muted: #8b98aa;
-  --text-dim: #586576;
-  --accent: #4cc9e6;
-  --accent-hover: #7fdcef;
+  --bg: #1e1e1e;
+  --bg-card: #252526;
+  --border: #3c3c3c;
+  --text: #d4d4d4;
+  --text-muted: #858585;
+  --accent: #4fc3f7;
+  --accent-hover: #81d4fa;
   --danger: #f48fb1;
+  --mono: 'SF Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Keep the root canvas dark so Dex's redirect hops don't flash white before styles apply. */
-html { background: var(--bg); }
+html { background: #1e1e1e; }
 
 .theme-body {
   margin: 0;
@@ -33,7 +32,8 @@ html { background: var(--bg); }
   padding: 1.5rem;
 }
 
-/* sign_in.html has no chrome, just a centred card; the mark moves into the card below. */
+/* Dex's top navbar is redundant here — sign_in.html has no chrome, just a centered card. Hide it and
+   bring the mark into the card instead, so a hop through Dex looks continuous. */
 .theme-navbar { display: none; }
 
 .dex-container {
@@ -44,42 +44,41 @@ html { background: var(--bg); }
   color: var(--text);
 }
 
-/* A column, so the mark and wordmark (pseudo-elements) can be ordered above the content. */
 .theme-panel {
-  display: flex;
-  flex-direction: column;
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.45);
   padding: 2.6rem 2rem 2rem;
-  text-align: center;
 }
 
+/* The Vaier network-node mark, echoing the sign-in card. */
 .theme-panel::before {
   content: '';
-  order: -2;
+  display: block;
   width: 54px;
   height: 54px;
   margin: 0 auto 0.9rem;
   background: url(logo.png) center / contain no-repeat;
-  filter: drop-shadow(0 0 11px rgba(76, 201, 230, 0.4));
+  filter: drop-shadow(0 0 11px rgba(79, 195, 247, 0.4));
 }
 
 .theme-panel::after {
   content: 'Vaier';
-  order: -1;
-  font-size: 1.55rem;
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.4rem;
   font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.2rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 1.4rem;
 }
 
 .theme-heading {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 400;
-  margin: 0 0 1.6rem;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 1.2rem;
 }
 
 /* Error page body copy. */
@@ -90,69 +89,9 @@ html { background: var(--bg); }
   margin: 0;
 }
 
-/* --- the password form ---------------------------------------------------------------------------- */
+.theme-form-row { margin: 0.7rem auto; }
 
-.theme-form-row { margin: 0 0 1rem; text-align: left; }
-
-.theme-form-label {
-  margin-bottom: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.theme-form-input {
-  display: block;
-  width: 100%;
-  padding: 0.65rem 0.8rem;
-  background-color: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.95rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.theme-form-input::placeholder { color: var(--text-dim); }
-
-.theme-form-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(76, 201, 230, 0.18);
-}
-
-.theme-btn--primary {
-  display: block;
-  width: 100%;
-  margin-top: 0.6rem;
-  padding: 0.72rem 1rem;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background-color: var(--accent);
-  color: #06222e;
-  font-size: 0.95rem;
-  font-weight: 600;
-  box-shadow: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.theme-btn--primary:hover { background-color: var(--accent-hover); border-color: var(--accent-hover); }
-
-.theme-btn--primary:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
-
-.theme-link-back { margin-top: 1.4rem; }
-
-.theme-link-back a,
-.dex-subtle-text {
-  color: var(--text-dim);
-  font-size: 0.78rem;
-  text-decoration: none;
-}
-
-.theme-link-back a:hover { color: var(--text-muted); }
-
-/* --- the connector picker: outlined accent, hover fills — the sign-in secondary style -------------- */
-
+/* Provider buttons (connector picker). Outlined accent, hover fills — the sign-in secondary style. */
 .theme-btn-provider {
   display: flex;
   align-items: center;
@@ -183,18 +122,17 @@ html { background: var(--bg); }
   font-size: 0.95rem;
 }
 
-/* Inline login error strip (e.g. a wrong first-run password). */
+/* Inline login error strip (e.g. wrong password on the local connector). */
 .dex-error-box {
   background-color: rgba(244, 143, 177, 0.12);
   border: 1px solid var(--danger);
   border-radius: 6px;
   color: var(--danger);
-  font-size: 0.85rem;
-  margin: 0 0 1rem;
+  margin: 1rem auto;
   max-width: none;
   padding: 0.5rem 0.75rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theme-btn-provider, .theme-btn--primary, .theme-form-input { transition: none; }
+  .theme-btn-provider { transition: none; }
 }

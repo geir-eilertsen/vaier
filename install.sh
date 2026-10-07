@@ -10,7 +10,7 @@
 #
 # Usage:
 #   mkdir -p vaier && cd vaier
-#   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | bash
 #
 # Safe to re-run on an existing install, and that is also how you UPGRADE the stack: it refreshes the
 # compose file and the committed assets, leaves .env alone, and tops up any auto-generated secret the
@@ -25,10 +25,8 @@
 # Override the ref (branch, tag or commit) with VAIER_REF, e.g. VAIER_REF=v1.2.3.
 set -euo pipefail
 
-REPO="${VAIER_REPO:-geir-eilertsen/vaier}"
+REPO="${VAIER_REPO:-getvaier/vaier}"
 REF="${VAIER_REF:-main}"
-# A bare commit names the private source; its mirror commit here is tagged src-<commit>.
-[[ "$REF" =~ ^[0-9a-f]{40}$ ]] && REF="src-$REF"
 
 # The ONLY runtime files the stack needs pre-placed before `docker compose up`: the compose file
 # plus every committed asset tree it bind-mounts. Everything else (wireguard/config, traefik/config,
@@ -68,10 +66,8 @@ fi
 # source dirs as root, so a later run as an unprivileged user can't write into them. Catch that here
 # with a precise fix, rather than letting tar fail with a misleading "check your network".
 blocked=()
-for p in "${RUNTIME_PATHS[@]}"; do
-  for d in "$(dirname "$p")" "$p"; do
-    if [ -e "$d" ] && [ ! -w "$d" ] && [[ " ${blocked[*]} " != *" $d "* ]]; then blocked+=("$d"); fi
-  done
+for d in . offline oauth2 dex; do
+  if [ -e "$d" ] && [ ! -w "$d" ]; then blocked+=("$d"); fi
 done
 if [ "${#blocked[@]}" -gt 0 ]; then
   die "these paths aren't writable — most likely root-owned leftovers from an earlier 'docker compose up':
@@ -141,15 +137,14 @@ fi
 # Generate any that are absent, in place — so both a fresh scaffold and a pre-existing .env end up
 # complete. Only ever appends a missing key; never touches a value the operator already set.
 gen_hex() { openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
-# URL-safe: oauth2-proxy decodes its cookie secret that way, and a '+' or '/' leaves it 44 raw bytes it rejects.
-gen_b64url() { { openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64; } | tr -d '\n' | tr '+/' '-_'; }
+gen_b64() { openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -d '\n'; }
 ensure_secret() {   # $1=var name  $2=generator function
   grep -qE "^$1=.+" .env 2>/dev/null && return 0
   printf '%s=%s\n' "$1" "$("$2")" >> .env
   say "Generated $1"
 }
 ensure_secret VAIER_DEX_CLIENT_SECRET gen_hex
-ensure_secret VAIER_OAUTH2_COOKIE_SECRET gen_b64url
+ensure_secret VAIER_OAUTH2_COOKIE_SECRET gen_b64
 # #329: the shared bouncer API key between crowdsec (BOUNCER_KEY_vaier, self-registers on boot)
 # and Traefik's bouncer plugin (CROWDSEC_BOUNCER_API_KEY). Not operator-authored — same reasoning as the
 # two secrets above.
@@ -172,12 +167,6 @@ set_env() {   # $1=key $2=value — replaces the key's line, or appends it
   awk -v k="$1" -v v="$2" '$0 ~ "^" k "=" { print k "=" v; done = 1; next } { print } END { if (!done) print k "=" v }' .env > "$tmp"
   cat "$tmp" > .env && rm -f "$tmp"   # cat, not mv: .env keeps its 600 mode
 }
-
-# Heal a cookie secret an older install.sh wrote with '+' or '/': the same characters, made URL-safe.
-if grep -qE '^VAIER_OAUTH2_COOKIE_SECRET=.*[+/]' .env; then
-  set_env VAIER_OAUTH2_COOKIE_SECRET "$(env_value VAIER_OAUTH2_COOKIE_SECRET | tr '+/' '-_')"
-  say "Repaired VAIER_OAUTH2_COOKIE_SECRET (it held characters oauth2-proxy cannot read)"
-fi
 
 if $interactive; then
   sudo=''; [ "$(id -u)" -eq 0 ] || sudo='sudo'

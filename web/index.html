@@ -279,20 +279,6 @@
             line-height: 1.6;
         }
 
-        .shots { display: grid; gap: 0.75rem; }
-        .shots-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-        .shot {
-            margin: 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .shot img { display: block; width: 100%; height: auto; }
-        .shots-pair .shot img { aspect-ratio: 1440 / 630; object-fit: cover; object-position: top left; }
-        .shot figcaption { padding: 0.7rem 1rem; font-size: 0.82rem; color: var(--text-muted); }
-        .step-body { min-width: 0; }
-
         footer {
             border-top: 1px solid var(--border);
             background: var(--bg-panel);
@@ -334,7 +320,7 @@
             .hero p.lede { font-size: 0.92rem; }
             section { padding: 2rem 1rem; }
             .section-heading h2 { font-size: 1.25rem; }
-            .why, .shots-pair { grid-template-columns: 1fr; }
+            .why { grid-template-columns: 1fr; }
             .diagram-wrap { padding: 1.25rem 0.75rem; }
         }
     </style>
@@ -385,7 +371,7 @@
             </a>
         </nav>
         <div class="topbar-user">
-            <a href="https://github.com/geir-eilertsen/vaier" class="topbar-item" target="_blank" rel="noopener" title="GitHub">
+            <a href="https://github.com/getvaier/vaier" class="topbar-item" target="_blank" rel="noopener" title="GitHub">
                 <svg viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
                 </svg>
@@ -423,15 +409,19 @@
         </div>
         <h1>Self-hosted infrastructure<br/>for <span class="accent">homelab developers</span>.</h1>
         <p class="lede">
-            <strong>Vaier</strong> (Norwegian for <em>wire</em>, said <strong>VY-er</strong>) turns WireGuard, Traefik
-            and sign-in into one web UI. Publish any container on any machine as an HTTPS site in one click.
+            <strong>Vaier</strong> — Norwegian for <em>wire</em>, pronounced <strong>VY-er</strong> — wires
+            together WireGuard, Traefik, and Google or GitHub sign-in (via oauth2-proxy) into a single web
+            UI. A domain and an email are all it needs to boot — sign in with the first-run password Vaier
+            prints in its own log, add Google or GitHub when you want to invite others. One wildcard DNS
+            record, made once, covers everything from here: add a Docker container on any VPN peer, pick a
+            subdomain, and Vaier handles the reverse proxy and HTTPS automatically.
         </p>
         <div class="hero-actions">
             <a href="#quickstart" class="btn btn-primary btn-large">Get started</a>
-            <a href="https://github.com/geir-eilertsen/vaier" class="btn btn-secondary btn-large" target="_blank" rel="noopener">View on GitHub</a>
+            <a href="https://github.com/getvaier/vaier" class="btn btn-secondary btn-large" target="_blank" rel="noopener">View on GitHub</a>
         </div>
         <div class="hero-badges">
-            <span class="badge-meta"><span class="dot"></span>Free to use</span>
+            <span class="badge-meta"><span class="dot"></span>Apache 2.0</span>
             <span class="badge-meta">Java 21 · Spring Boot</span>
             <span class="badge-meta">Single Docker Compose</span>
             <span class="badge-meta">No database</span>
@@ -447,36 +437,23 @@
             <div class="why-card">
                 <div class="label">// without vaier</div>
                 <h3>Five tools, five config files, five places to mess up</h3>
-                <p>A VPN peer, a DNS record, a proxy route, a certificate and an auth rule — for every new service.</p>
+                <p>
+                    You spin up a container on a homelab box. Now you need a WireGuard peer, a DNS
+                    record, a Traefik dynamic-config entry, a Let's Encrypt cert, a forward-auth rule,
+                    and a bookmark somewhere you'll actually find later. Every new service repeats the
+                    whole dance. Every drift is silent.
+                </p>
             </div>
             <div class="why-card">
                 <div class="label">// with vaier</div>
                 <h3>One UI. One click. Zero DNS, ever again.</h3>
-                <p>Make one wildcard DNS record once. After that, pick a container, pick a name, and it's live with HTTPS.</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="look">
-        <div class="section-heading">
-            <span class="crumb">// see it</span>
-            <h2>Your whole fleet, at a glance.</h2>
-        </div>
-        <div class="shots">
-            <figure class="shot">
-                <img src="img/topology.jpg" width="1431" height="805" loading="lazy"
-                     alt="Vaier's Topology view: two harbour villages joined to a lighthouse by tunnels, with pirate ships kept at sea">
-                <figcaption>Your sites, the tunnels between them, and the scanners being kept out.</figcaption>
-            </figure>
-            <div class="shots-pair">
-                <figure class="shot">
-                    <img src="img/fleet.jpg" width="1440" height="630" loading="lazy" alt="The fleet: every machine as a card">
-                    <figcaption>Every machine in one place.</figcaption>
-                </figure>
-                <figure class="shot">
-                    <img src="img/services.jpg" width="1180" height="716" loading="lazy" alt="Your services: every published service grouped by machine">
-                    <figcaption>Every service you publish, one click away.</figcaption>
-                </figure>
+                <p>
+                    One wildcard DNS record, made once, before you ever run <code>docker compose up</code>.
+                    From then on, Vaier discovers containers on every connected peer, lets you pick a
+                    subdomain, generates the Traefik route, provisions the cert, optionally gates it behind
+                    Google or GitHub sign-in, and rolls back the flow if anything fails. Nothing to add to
+                    DNS, ever — the name already resolves. Your homelab now feels like a PaaS.
+                </p>
             </div>
         </div>
     </section>
@@ -489,70 +466,19 @@
         <div class="features">
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M19 5l-4 4M5 19l4-4M19 19l-4-4"/>
+                    <rect x="7" y="2" width="10" height="20" rx="2"/>
+                    <path d="M11 18h2"/>
                 </svg>
-                <h3>One-click publishing</h3>
-                <p>Any container on any machine becomes an HTTPS site in one click. Traefik routes it and Let's Encrypt signs it.</p>
+                <h3>A phone — or a laptop — that brings its own key</h3>
+                <p>No QR codes, no WireGuard app: a phone or a Windows laptop joins only through the Vaier app. It makes the key on the device and asks to join, showing a four-digit code while it waits — you add it from wherever you're already signed in, your laptop or the phone itself, and it connects the moment you do. The private half never leaves the phone, so Vaier only ever sees the public half: there is no config to save and nothing left to download for that phone ever again. Leaving is just as self-contained — the phone takes itself out of the fleet, for good — and it works the other way too: remove a phone from your end and it notices on its own, drops the tunnel, and asks to join again. The app comes from your own Vaier — open Your services on the phone and an Install card offers it, shown only on a device that can take it and only when there is a copy to hand out. That copy has your Vaier's address written into it, so the app knows where it came from without you typing anything. Windows laptops get the same trick: the Vaier app for Windows downloads from the same Your services page as one installer with your address already in it, installs and uninstalls itself like any Windows program, makes its own key, shows the same code, keeps the tunnel up as a Windows service, leaves on its own, and notices when you remove it. On Android a Quick Settings tile connects and disconnects from the pull-down shade. On Windows it lives in the tray from sign-in, lit while connected, and never asks for admin just to open. Either way the app says hello and goodbye through the tunnel itself, so the fleet shows it connect or disconnect in about a second — not three minutes later. <em>Presence from the app and key rotation are still to come.</em></p>
             </div>
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="4" width="18" height="12" rx="2"/>
                     <path d="M8 20h8M12 16v4"/>
                 </svg>
-                <h3>A fleet over WireGuard</h3>
-                <p>Add a server with one setup link. Vaier finds its home network and lets the whole fleet reach it.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="7" y="2" width="10" height="20" rx="2"/>
-                    <path d="M11 18h2"/>
-                </svg>
-                <h3>Phones and laptops</h3>
-                <p>The Vaier app for Android and Windows joins with a four-digit code. No QR codes, no config files.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="8" r="3.5"/>
-                    <path d="M2 21c0-4 3-7 7-7s7 3 7 7"/>
-                    <circle cx="17" cy="6" r="2.5"/>
-                    <path d="M22 15c0-2.5-2-4.5-4.5-4.5"/>
-                </svg>
-                <h3>Sign-in and access</h3>
-                <p>Start with a first-run password, add Google or GitHub later. Choose who can open each service.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 6h18M3 12h18M3 18h18"/>
-                    <circle cx="7" cy="6" r="1.3" fill="currentColor" stroke="none"/>
-                    <circle cx="7" cy="12" r="1.3" fill="currentColor" stroke="none"/>
-                    <circle cx="7" cy="18" r="1.3" fill="currentColor" stroke="none"/>
-                </svg>
-                <h3>Explorer</h3>
-                <p>Files, containers, disks and backups across every machine, in one place. It opens on what needs you.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h11l5 5v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
-                    <path d="M8 20v-6h8v6M8 4v4h6"/>
-                </svg>
-                <h3>Backups</h3>
-                <p>Tick what matters and press Back up. Archives stay readable even if Vaier is gone.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="5" width="18" height="14" rx="2"/>
-                    <path d="m3 7 9 7 9-7"/>
-                </svg>
-                <h3>Alerts that mean something</h3>
-                <p>Disks forecast days ahead, containers that didn't come back, updates waiting. Mail only when something is wrong.</p>
-            </div>
-            <div class="feature">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6Z"/>
-                    <path d="m9 12 2 2 4-4"/>
-                </svg>
-                <h3>Threats you can see</h3>
-                <p>CrowdSec blocks scanners at the edge, and Vaier tells you who and why, in plain words.</p>
+                <h3>VPN peer management</h3>
+                <p>Create, delete, and monitor WireGuard peers. A server comes up from one no-root setup link — or its <code>.conf</code> and docker-compose — shown once. And you never type a CIDR: Vaier reads the network a server sits on over the SSH connection it already has, then says <em>"Colina 27 sits on 192.168.1.0/24"</em> and names the interface it read it from. One click and the whole fleet reaches that network — never one that would cut a machine off its own uplink. Phones and laptops resolve through the Pi-hole that ships in the stack — no extra box to run, and its admin publishes behind your sign-in like anything else.</p>
             </div>
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -561,15 +487,40 @@
                     <line x1="13" y1="15" x2="17" y2="15"/>
                 </svg>
                 <h3>Web terminal</h3>
-                <p>A persistent SSH shell to any machine, in your browser. Keys never leave the server.</p>
+                <p>Open a real, persistent SSH shell to any machine — peers, LAN servers, or the Vaier host itself — in its own window. Backed by tmux on the machine, it reattaches automatically across reconnects and even a Vaier redeploy. Credentials stay server-side; the browser never sees the secret. Its top bar also says where that machine stands on Claude sign-in, and signs it in — see below. No key for a machine yet? Vaier mints an ed25519 keypair itself, keeps the private half, and hands you the one line to paste into <code>authorized_keys</code>. Paste your own key instead and it's checked while you're still looking at the form — a <code>.pub</code> or a PuTTY <code>.ppk</code> is caught there, not at the next thousand connects. Every machine says which user Vaier acts as on it, with <code>root</code> flagged on its card — so you know what a delete reaches before you click it. And when a host key changes, Vaier refuses the connection and hands you the way back: clear the pin, reconnect, re-pinned on first use.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7.5" cy="15.5" r="4.5"/>
+                    <path d="M10.7 12.3 20 3"/>
+                    <path d="m16.5 6.5 2 2M18.8 4.2l2 2"/>
+                </svg>
+                <h3>Fleet credentials</h3>
+                <p>The vault's other half: a secret that has to live <em>on</em> every machine, rather than one Vaier uses to reach one — a CLI's login file, an API token. Paste it once and Vaier puts it at the same path on every machine that runs a shell it can reach, at the mode you pick. It never reads what you handed it: it copies the bytes and checks what came back, so a file that lands owned by the wrong user is a reported failure instead of one that looks right and silently doesn't work. One strip per credential says where it's in place, where it's out of date, and where it never landed — machines with no shell to hold it are named underneath, not counted against you. Vaier rechecks every five minutes and puts back whatever went missing, but only for a credential you've distributed at least once. <strong>Withdraw</strong> takes it off the fleet everywhere it can reach and stops Vaier putting it back.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <path d="m10 17 5-5-5-5"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                <h3>Claude sign-in</h3>
+                <p>Sign every machine's Claude Code CLI in to your own Anthropic account from Vaier's own terminal window on that machine — nothing typed on the box, no credential file copied around. Signing in is a terminal act — it runs the CLI in one login's home — so it lives in the window that <em>is</em> that machine's shell as that login. Its top bar says where the machine stands; click it and the sign-in drops in above the shell. Vaier starts the sign-in on the machine, hands you the link, takes the code Anthropic shows you back to the CLI waiting there, and then asks the machine where it landed. The credential is Anthropic's to mint and the CLI's to keep: it never passes through Vaier, nothing about it is stored, and <strong>Sign out</strong> asks that CLI to let go rather than deleting a file. The panel names the user Vaier acts as there and the account it's signed in as — a sign-in lives in one user's home, and a box can be signed in as one login and expired as another — so a fleet quietly split across two accounts shows up before something fails oddly. The bar says it in Claude's own clay too, faded when signed out, so a machine's own shell never disagrees with its card — and where no sign-in could happen there at all, there's no control rather than one explaining an impossibility. And you don't have to open a shell: a machine whose Claude is signed out says so on its card in the fleet, in that same clay with the glyph worn hollow — never in the amber and red that mean an outage — while a signed-in machine's card stays quiet. It comes from the same five-minute rounds that read its disks, and a sign-in you just finished lands on the card at once rather than waiting for the next one. Nothing is woken to draw it — and a machine Vaier hasn't asked, one with no Claude on it, or one that didn't answer gets no mark at all, never one that says signed out.</p>
             </div>
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 4h16v11H9l-4 4v-4H4z"/>
                     <path d="M10.4 9.2c0-1.1.9-1.9 2-1.9s2 .8 2 1.8c0 1.5-2 1.6-2 2.9M12.4 14.4v.1"/>
                 </svg>
-                <h3>Ask Marvin</h3>
-                <p>Ask your fleet questions in plain words. Marvin can suggest an action, but only your click runs it.</p>
+                <h3>Chat</h3>
+                <p>A pane in the Explorer that answers in sentences, built from your fleet's own facts — which machines are up, who's waiting to join, published services, backups, disks, container updates, who's blocked at the edge. It's Marvin who answers: a brain the size of a planet, gloomy about being asked disk space again, and always right anyway. Ask it something none of that covers — "any OS updates on Colina 27?" — and it can run one read-only command over SSH to find out; ask it something the fleet can't know at all — "what does that CVE affect?" — and it searches the public web and reads the page back, citing its address. It can read your services' own APIs too — "is the pool pump on?" asks openHAB itself, with a login of its own that you give it per service. It can also propose the click for you — let a phone in, back up a machine, update a container, install a machine's OS updates, switch that pump off through openHAB's API — but it never presses the button itself: one card in plain words, the exact details under them, and your click runs it. Ask for a zip — "the pictures from last year today" — and it finds the files itself and drops a download card in the pane, ready to click; a big one it asks about first, and offers a mailed link instead. Send it on an errand — "every morning, tell me only if a disk is filling up" — and it runs alone at that time, on the same reads, and mails you what it found; nothing to say, nothing sent. If a watch finds something to do, it mails you one link to say yes to, and nothing runs until you do. Reading is always look-never-change: no sudo, no chaining, no secrets. It remembers, too — the thread is kept per operator, not per browser tab, and long ones get shortened rather than dropped. A <strong>Marvin</strong> menu on the pane's own bar opens what it's kept — every fleet-wide memory, every standing errand, each with its own cancel — and what it's cost this month, tokens and all, tallied from your own key at list price. Paste your own Anthropic API key under Settings and it shows up in the menu; no key, no pane.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M19 5l-4 4M5 19l4-4M19 19l-4-4"/>
+                </svg>
+                <h3>One-click service publishing</h3>
+                <p>Any container on any peer becomes a public HTTPS subdomain in one click — no DNS step, since the name already resolves under your wildcard record — with automatic rollback if the route fails. A port that isn&rsquo;t a website, like an MQTT broker, is published as a stream on the same name and the same HTTPS port: Traefik terminates TLS and passes the bytes straight through.</p>
             </div>
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -579,16 +530,75 @@
                     <rect x="14" y="14" width="7" height="7" rx="1"/>
                 </svg>
                 <h3>Your services</h3>
-                <p>One page linking every service you publish, with direct links when you're at home.</p>
+                <p>One page linking every published service — listing the machine you're sitting beside first and switching to direct LAN URLs when you're on its network.</p>
             </div>
             <div class="feature">
                 <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                    <path d="m10 17 5-5-5-5"/>
-                    <line x1="15" y1="12" x2="3" y2="12"/>
+                    <path d="M3 12c4 0 4-6 9-6s5 6 9 6-4 6-9 6-5-6-9-6Z"/>
+                    <circle cx="12" cy="12" r="2.5"/>
                 </svg>
-                <h3>Claude Code on every machine</h3>
-                <p>Sign each machine's Claude Code in to your own account from Vaier's terminal.</p>
+                <h3>Reverse proxy on autopilot</h3>
+                <p>Traefik dynamic config is generated for you, with a per-service auth mode — public or social sign-in — a CrowdSec-powered edge that blocks malicious traffic before it reaches your backends, and a branded offline page when a backend is down.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>
+                </svg>
+                <h3>Wildcard DNS</h3>
+                <p>Vaier stays out of DNS entirely: one <code>*.yourdomain.com</code> record, made once at whatever host your domain lives on, covers the console, sign-in, and every service you'll ever publish — checked and reported at every boot.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2 21c0-4 3-7 7-7s7 3 7 7"/>
+                    <circle cx="17" cy="6" r="2.5"/>
+                    <path d="M22 15c0-2.5-2-4.5-4.5-4.5"/>
+                </svg>
+                <h3>Access management</h3>
+                <p>Day one needs no OAuth app: the first-run password in Vaier's log lets the first person in, and that sign-in is the admin. Add Google or GitHub from People when you want company. After that, every identity is an access entry with a role — pending, user, or admin — and free-form per-service groups. Approve newcomers and gate services from the UI, no YAML. A service with its own password can be handed a login for the people you let in, so they never need to know it.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <path d="m3 7 9 7 9-7"/>
+                </svg>
+                <h3>Monitoring &amp; alerts</h3>
+                <p>Every disk on every machine is watched, with a fill-rate forecast that learns the disk over a week and mails you <em>days</em> before it crosses the line you set — "1.2 GiB/day, reaches its 80% threshold in 4.5 days". It counts down to your threshold rather than to 100%, so the warning lands while there's still something to do about it, and it tracks free space rather than a rounded percentage, so a slow creep can't hide in the rounding. A nightly build-and-prune sawtooth doesn't fake an emergency either. A disk already too full when Vaier starts is mailed about on sight, then again only when it climbs five points — never "still full" on a timer — and the all-clear waits until it has drained five points back <em>under</em> the line, so a disk hovering either side of your threshold never mails you a scare and an all-clear every day. And you don't wait for the mail: a machine's card names its worst disk in amber or red the moment it's filling, and says nothing while there's room — from the reading Vaier already takes on its rounds — no machine is woken to draw it, and one Vaier hasn't read yet stays blank rather than looking fine. And one fault nothing else could see: a machine that has lost its route to the internet still answers every question Vaier asks it from inside your house — reachable, disks fine, backups fine — so Vaier now reads its routing table on those same rounds and says so, once, on its card and in your inbox. Same for a container that quietly did not come back after a reboot: Vaier has watched it run every 30 seconds for as long as it has been up, so when it stops and stays stopped you get one email naming it — and, if the machine rebooted since, the sentence that explains it. The same reading catches the two troubles that come before that: a container that is up while its own health check fails, and one Docker keeps restarting in a loop, which on <code>restart: always</code> would never become "gone" at all. Plus container image-update detection with a one-click <strong>Update</strong> — pulls the newer image, recreates the container from its own compose file over SSH, then removes the image it replaced, so a year of updates doesn't quietly fill the disk with versions nothing runs — and up/down alerts. Vaier checks its own work too: it reads back the reverse proxy config it writes itself and names anything no route can reach — an orphaned middleware, a redirect that points at itself — and tells you rather than touching the file. Email you can trust: routine bans at the edge are shown, never mailed, and a <code>latest</code> that's really a nightly channel is marked but never mailed either — a tag that moves on its own is a channel, not news — so a message from Vaier always means something.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6Z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+                <h3>Threats you can see</h3>
+                <p>CrowdSec turns the internet's scanners away at the edge — and Vaier shows you who: every blocked address live, said in plain words (“looked for admin pages from Belgium, kept out for about 4 hours more”), pinged red on the fleet map. Each row’s menu lets it back in, or trusts it. Everything you've trusted is listed right below, one click to take it back. Below that, a separate control lets you block an address CrowdSec hasn't caught, for 1 hour up to 7 days — never permanent, and never a click away from "trust". You're emailed only when it's a credential attack, or when one of your own networks gets caught — never for a block you placed yourself.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h11l5 5v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+                    <path d="M8 20v-6h8v6M8 4v4h6"/>
+                </svg>
+                <h3>Fleet backup &amp; survival kit</h3>
+                <p>Tick what matters in a machine's files and press Back up — Vaier does the rest, nightly, to the one machine you named as the backup server (borg, under the hood), with a self-updating "survival kit" so your archives stay readable even if Vaier itself is gone. An archive with holes in it doesn't stay quiet: the machine tells you which files it lost, and one click makes Vaier read all of them from the next run.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18M3 12h18M3 18h18"/>
+                    <circle cx="7" cy="6" r="1.3" fill="currentColor" stroke="none"/>
+                    <circle cx="7" cy="12" r="1.3" fill="currentColor" stroke="none"/>
+                    <circle cx="7" cy="18" r="1.3" fill="currentColor" stroke="none"/>
+                </svg>
+                <h3>Explorer</h3>
+                <p>It opens on <strong>Needs you</strong>: everything that wants you, most urgent first — a server that stopped answering, a backup that failed and the one button that fixes it, a disk filling, a phone waiting to join, Vaier's own basics if one is off, alert mail that stopped going out, a newer Vaier ready to install — and nothing at all when all is well, with the machines in trouble listed first. A machine you turned off yourself is one tap: <strong>I switched it off</strong> greys it, silences its mails and skips its backups until it answers again, when it clears itself. One address space for the whole fleet — browse files and containers, select and transfer across machines, drop files straight into a folder to upload them, step back in time through backup archives, and see who's blocked at the edge right now. Every folder, machine and archive has its own link, so reload, Back and a pasted URL land exactly where you were. Each machine's card says what it can do, how its last backup went, which disk is closest to full, where it stands on Claude sign-in, how many containers want a newer image — open one and update it, and one on a tag that moves every day or so is labelled <code>moving</code> rather than counted as news — and what it last opened, and when, whenever that reach came over the tunnel itself. A machine says how many OS updates wait — and which are security fixes — only when some do, and one Vaier can reach as root installs them on one click — a plain apt or dnf upgrade that removes nothing and never reboots, then tells you how many packages changed and whether a reboot is due. There is no tree column: the pane takes the whole width, and the cards and the crumbs do the moving. Beside the map, a <strong>Topology</strong> view paints the fleet as one picture: the internet is the open sea, the Vaier server a lighthouse whose beam is what you publish, each LAN a village on a northern or southern coast, every tunnel a wake across the water to its light, and every address the edge is keeping out a pirate ship turned away. Its map draws one marker per site — the Vaier server and each fixed-line peer, with the machines behind it — each joined to the server by its tunnel, which turns dashed red when it drops. Phones and laptops are never placed on it: Vaier tracks no one.</p>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18M9 3v18"/>
+                </svg>
+                <h3>Consistent branding</h3>
+                <p>The oauth2-proxy sign-in and the Dex broker screens share Vaier's dark theme — the Google/GitHub hand-off feels like one app, not three.</p>
             </div>
         </div>
     </section>
@@ -645,8 +655,11 @@
                 <text x="450" y="106" fill="#858585" font-family="SF Mono, Consolas, monospace" font-size="10">WireGuard tunnel</text>
             </svg>
             <p class="diagram-caption">
-                Traffic arrives at the Vaier server, passes sign-in if the service asks for it, and travels the
-                tunnel to the container. Your machines never need a public IP.
+                Every published service resolves under your one wildcard DNS record to the single Vaier
+                server, terminates TLS at Traefik, optionally passes social-login authorization (Google or
+                GitHub via oauth2-proxy, then Vaier's own access check), and is proxied over WireGuard to
+                the container running on a peer. A stream takes the same path as far as TLS and then
+                forwards raw bytes. The peers never need a public IP.
             </p>
         </div>
     </section>
@@ -661,23 +674,23 @@
                 <div class="step-num">01</div>
                 <div class="step-body">
                     <h3>Bring a Linux server with a public IP</h3>
-                    <p>Open TCP 22, 80, 443 and UDP 51820, and bring a domain.</p>
+                    <p>An EC2 <code>t3.small</code> or equivalent. Open TCP 22, 80, 443 and UDP 51820. Bring a domain you control, hosted anywhere that can serve a wildcard <code>A</code> record.</p>
                 </div>
             </div>
             <div class="step">
                 <div class="step-num">02</div>
                 <div class="step-body">
                     <h3>Run the installer</h3>
-                    <p>It asks three questions: domain, email and time zone. It can install Docker for you if needed.</p>
+                    <p>Three questions — domain, email, time zone — and that's the lot. No git clone, no hand-edited <code>.env</code>, no OAuth app. No Docker yet? It offers to install it.</p>
 <pre class="code"><span class="cmd">mkdir</span> -p vaier &amp;&amp; <span class="cmd">cd</span> vaier
-<span class="cmd">curl</span> -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | <span class="cmd">bash</span></pre>
+<span class="cmd">curl</span> -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | <span class="cmd">bash</span></pre>
                 </div>
             </div>
             <div class="step">
                 <div class="step-num">03</div>
                 <div class="step-body">
                     <h3>Make the one DNS record it gives you</h3>
-                    <p>One wildcard record covers every service you will ever publish. The installer prints it for you.</p>
+                    <p>The installer checks whether your domain already reaches the server. If not, it prints the single wildcard record to make, IP filled in — it covers the console, sign-in, and every service you'll ever publish. Start anyway: Vaier waits for it before asking Let's Encrypt.</p>
 <pre class="code"><span class="comment"># *.yourdomain.com   A   &lt;this server's public IP&gt;</span></pre>
                 </div>
             </div>
@@ -685,7 +698,7 @@
                 <div class="step-num">04</div>
                 <div class="step-body">
                     <h3>Say yes, and sign in</h3>
-                    <p>The installer prints your first-run password. The first person to sign in becomes the admin. To update later, run the same command again.</p>
+                    <p>Let the installer start Vaier. It waits for the boot and prints your <strong>first-run sign-in</strong> — URL, email, password. Press <strong>Sign in with the first-run password</strong> and you're in — that first sign-in becomes the admin. Google or GitHub sign-in comes later, under <strong>People</strong>, and mail under <strong>Settings</strong>, whenever you want to invite others; anyone who signs in after you waits as <strong>pending</strong> until you approve them. Updating later? Run the same command again.</p>
                 </div>
             </div>
         </div>
@@ -700,12 +713,20 @@
             <div class="why-card">
                 <div class="label">// the homelabber</div>
                 <h3>One person. One server. A growing pile of containers.</h3>
-                <p>Stop hand-editing proxy configs every time you add Plex or another app.</p>
+                <p>
+                    You're done patching together Caddy/Traefik configs by hand every time you stand
+                    up Plex, a Git server, or yet another self-hosted toy. Vaier is the layer that
+                    makes a single Linux box behave like a tiny private cloud.
+                </p>
             </div>
             <div class="why-card">
                 <div class="label">// the small team</div>
                 <h3>A handful of users, real auth, real DNS.</h3>
-                <p>Let people in with Google or GitHub, and no one has to ask for a password.</p>
+                <p>
+                    Approve teammates by their Google or GitHub identity, gate sensitive services by
+                    access group, and let everyone find the apps in Your services. No spreadsheets of
+                    URLs. No passwords to hand out — no "what's the password for X" pings.
+                </p>
             </div>
         </div>
     </section>
@@ -725,11 +746,12 @@
                 V<span class="brand-ai">ai</span>er
             </a>
             <div class="footer-links">
-                <a href="https://github.com/geir-eilertsen/vaier">GitHub</a>
-                <a href="https://github.com/geir-eilertsen/vaier/issues">Issues</a>
+                <a href="https://github.com/getvaier/vaier">Source</a>
+                <a href="https://github.com/getvaier/vaier/issues">Issues</a>
                 <a href="https://hub.docker.com/r/getvaier/vaier">Docker Hub</a>
+                <a href="https://github.com/getvaier/vaier/blob/main/LICENSE">License</a>
             </div>
-            <div>Free to use · Built for the self-hosted community.</div>
+            <div>Apache 2.0 · Built for the self-hosted community.</div>
         </div>
     </footer>
 </body>
