@@ -618,7 +618,9 @@ services:
         URL=https://download.db-ip.com/free/dbip-city-lite-$$MONTH.mmdb.gz
         echo "Downloading $$URL"
         if ! wget -q -O /tmp/db.mmdb.gz "$$URL"; then
-          PREV=$$(date -d "$$MONTH-01 -1 day" +%Y-%m 2>/dev/null || date +%Y-%m)
+          # busybox date has no "-1 day"; step the month back by hand.
+          Y=$$(date +%Y); M=$$(date +%m); M=$${M#0}
+          if [ "$$M" -eq 1 ]; then PREV="$$((Y - 1))-12"; else PREV="$$Y-$$(printf %02d $$((M - 1)))"; fi
           echo "Current month not published, falling back to $$PREV"
           wget -q -O /tmp/db.mmdb.gz "https://download.db-ip.com/free/dbip-city-lite-$$PREV.mmdb.gz" || {
             echo "WARN: could not download geolocation DB; peer map will be empty"

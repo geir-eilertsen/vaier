@@ -68,8 +68,10 @@ fi
 # source dirs as root, so a later run as an unprivileged user can't write into them. Catch that here
 # with a precise fix, rather than letting tar fail with a misleading "check your network".
 blocked=()
-for d in . offline oauth2 dex; do
-  if [ -e "$d" ] && [ ! -w "$d" ]; then blocked+=("$d"); fi
+for p in "${RUNTIME_PATHS[@]}"; do
+  for d in "$(dirname "$p")" "$p"; do
+    if [ -e "$d" ] && [ ! -w "$d" ] && [[ " ${blocked[*]} " != *" $d "* ]]; then blocked+=("$d"); fi
+  done
 done
 if [ "${#blocked[@]}" -gt 0 ]; then
   die "these paths aren't writable — most likely root-owned leftovers from an earlier 'docker compose up':
