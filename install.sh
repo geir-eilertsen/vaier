@@ -10,7 +10,7 @@
 #
 # Usage:
 #   mkdir -p vaier && cd vaier
-#   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier-public/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | bash
 #
 # Safe to re-run on an existing install, and that is also how you UPGRADE the stack: it refreshes the
 # compose file and the committed assets, leaves .env alone, and tops up any auto-generated secret the
@@ -25,7 +25,7 @@
 # Override the ref (branch, tag or commit) with VAIER_REF, e.g. VAIER_REF=v1.2.3.
 set -euo pipefail
 
-REPO="${VAIER_REPO:-geir-eilertsen/vaier-public}"
+REPO="${VAIER_REPO:-geir-eilertsen/vaier}"
 REF="${VAIER_REF:-main}"
 # A bare commit names the private source; its mirror commit here is tagged src-<commit>.
 [[ "$REF" =~ ^[0-9a-f]{40}$ ]] && REF="src-$REF"
