@@ -55,6 +55,7 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 
 - **Edit details** sets a machine's name and **description**. Renaming breaks nothing, and names **do not have to be unique**.
 - An amber icon means reachable but the Docker scrape failed; red means unreachable.
+- **Removing a machine** also forgets its SSH login and host key and stops its backups. The archives already made stay on the backup server.
 - The **Map** shows one marker per site. Phones and laptops are never placed on it.
 
 ### Show-once peer config
@@ -62,7 +63,7 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the pane offers under **Keys and removal**:
 
 - **Send its setup again** (Reissue) — keeps the keypair. Use it for a lost config or an ⚠ **out-of-date config** badge.
-- **Give it new keys** (Regenerate) — rotates the keypair; the old config stops working at once.
+- **Give it new keys** (Regenerate) — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app
 
