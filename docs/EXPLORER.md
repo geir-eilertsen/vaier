@@ -111,7 +111,7 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 
 ### Browsing the past (the time rail)
 
-A machine with backups grows a **time rail**: one stop per archive, newest nearest **Now**. Click a stop to see the files as they were. The past turns amber and offers no write verbs. Click **Now** to return.
+A machine with backups grows a **time rail**: one stop per archive, newest nearest **Now**. Click a stop to see the files as they were. The past turns amber and offers no write verbs. Click **Now** to return. While that machine's backup is running, borg locks the repository and the past shows its error instead; try again when the run ends.
 
 ### Marking what matters (backing up from the file view)
 

@@ -42,6 +42,7 @@ You never create one by hand: **Back up** makes one per machine. Each is an entr
 
 - A name may hold only letters, digits, `_` and `-`; "NUC 02" becomes `NUC-02`.
 - A new repository's passphrase is shown once with a copy button. Save it — it is never shown again.
+- A repository's passphrase can't be changed afterwards; **Edit** covers its path and append-only setting.
 
 **Prepare client** installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need.
 
@@ -69,11 +70,11 @@ Each **backup run** ends as success, warnings, **incomplete**, failed, or unknow
 
 - **Incomplete** — some source files couldn't be read. The archive has holes, so this counts as a **failure**: red in the Explorer and a *Backup incomplete* mail naming the lost files.
 - **Warnings** — borg grumbled but lost nothing (a file changed while read). Not a failure; no mail.
-- **Failed** — emails every admin.
+- **Failed** — including a run that never started (no SSH access, no credential, no borg). Emails every admin once, and again when the job recovers.
 
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 
-Each machine keeps its borg passphrase file in `~/.vaier-backup`.
+Each machine keeps its borg passphrase file in `~/.vaier-backup`. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself.
 
 A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **skipped, not failed**: no run, no red mark, no mail.
 
