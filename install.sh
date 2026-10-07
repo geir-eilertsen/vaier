@@ -10,7 +10,7 @@
 #
 # Usage:
 #   mkdir -p vaier && cd vaier
-#   curl -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier-public/main/install.sh | bash
 #
 # Safe to re-run on an existing install, and that is also how you UPGRADE the stack: it refreshes the
 # compose file and the committed assets, leaves .env alone, and tops up any auto-generated secret the
@@ -25,7 +25,7 @@
 # Override the ref (branch, tag or commit) with VAIER_REF, e.g. VAIER_REF=v1.2.3.
 set -euo pipefail
 
-REPO="${VAIER_REPO:-getvaier/vaier}"
+REPO="${VAIER_REPO:-geir-eilertsen/vaier-public}"
 REF="${VAIER_REF:-main}"
 
 # The ONLY runtime files the stack needs pre-placed before `docker compose up`: the compose file

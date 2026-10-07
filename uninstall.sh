@@ -3,7 +3,7 @@
 # Removes Vaier from this machine — even when its install folder is already gone.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/getvaier/vaier/main/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier-public/main/uninstall.sh | bash
 #
 # It finds the stack by the labels Docker Compose puts on every container, lists everything it will remove,
 # and asks before touching anything. VAIER_UNINSTALL_YES=1 skips the question; VAIER_UNINSTALL_DRY_RUN=1
