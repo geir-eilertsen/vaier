@@ -27,6 +27,8 @@ set -euo pipefail
 
 REPO="${VAIER_REPO:-geir-eilertsen/vaier-public}"
 REF="${VAIER_REF:-main}"
+# A bare commit names the private source; its mirror commit here is tagged src-<commit>.
+[[ "$REF" =~ ^[0-9a-f]{40}$ ]] && REF="src-$REF"
 
 # The ONLY runtime files the stack needs pre-placed before `docker compose up`: the compose file
 # plus every committed asset tree it bind-mounts. Everything else (wireguard/config, traefik/config,
