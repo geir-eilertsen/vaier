@@ -107,9 +107,11 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 1. Start a Docker container on any connected peer.
 2. In the **Explorer**, open the peer's pane; the container shows as a **+ Publish** row.
 3. Click it, enter a subdomain, and optionally require Social login.
-4. Vaier writes the route. There is no DNS step.
+4. Vaier writes the route and waits for Traefik to accept it. There is no DNS step.
 
-The service is live at `https://subdomain.yourdomain.com`.
+The service is live at `https://subdomain.yourdomain.com`. If Traefik refuses the route, or never loads it, Vaier removes it again.
+
+A name too close to an existing one is refused: `printer-colina27` beside `printer.colina27`, or `/a-b` beside `/a/b` on one subdomain. Pick another.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a **+ Publish** row.
