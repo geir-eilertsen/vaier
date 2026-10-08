@@ -69,6 +69,7 @@ An errand can propose the same actions a card can, including writes to a service
 
 - The link sits behind Vaier's sign-in and shows the same headline and details, with **Do it** and **No**. Opening it never runs anything; only **Do it** does.
 - It works once, for 24 hours, and only for you.
+- The same question waits as a card in Chat, so a mail lost to a spam filter can still be answered there. Whichever you answer first wins.
 - At most three wait at once. Without mail set up, nothing is proposed by mail.
 
 ## Memory
