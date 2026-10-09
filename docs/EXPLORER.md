@@ -34,7 +34,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 
 A row goes the moment its problem clears. **When nothing needs you, the list shows nothing and takes no room.**
 
-Machines are **sorted trouble-first**, and a card wears a short mark for its trouble ("Backup failed"). A machine's own page opens on its own Needs you rows.
+Machines are **grouped by site**: the Vaier server's site first, then each house with a server peer, then phones and laptops under **Devices**. A machine never moves when trouble comes or goes; its card wears a short mark instead ("Backup failed"). A machine's own page opens on its own Needs you rows.
 
 ### Switched off on purpose
 
@@ -173,7 +173,7 @@ The **Shell** door opens a real SSH shell to the machine, the **Vaier server** i
 - **Send password** types the stored password into a `sudo` prompt without the browser seeing it.
 - On a phone a **key bar** gives **Esc**, **Tab**, arrows and sticky **Ctrl**/**Alt**.
 
-Credentials stay on the server. If a host key changes, Vaier refuses and offers **Clear pinned key**.
+Credentials stay on the server. If a machine's SSH key changes, Vaier refuses to connect: Shell, Files and Storage grey out, and **Needs you** says so with both fingerprints and **Clear pinned key**. Check the new fingerprint on the machine before you clear it.
 
 ### Copy, paste and scroll inside a shell
 
