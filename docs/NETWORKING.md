@@ -73,6 +73,8 @@ This is the only way a phone or a Windows PC joins.
 2. In the app, ask to join. It shows a four-digit **join code**.
 3. Approve it under **Waiting to join** on the fleet page, or from the mail admins receive.
 
+At most five devices wait at once, and at most two from one internet address. A request waits ten minutes. The mail goes out at most once every ten minutes, so check **Waiting to join** for the rest.
+
 The private key never leaves the device, so there is nothing to save.
 
 - **Android:** add the **Vaier** tile to Quick Settings to connect without opening the app.
