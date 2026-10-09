@@ -18,7 +18,7 @@ Which machines are connected, who's waiting to join, published services and thei
 
 ## A read-only command on a machine
 
-For what those facts don't answer — a log, a process list, a file — Chat can run one **read-only command** on a machine over SSH, as Vaier's login user, without sudo. Only commands that look are allowed (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show` and the like). Chaining, redirects and anything naming where a secret lives are refused.
+For what those facts don't answer — a log, a process list, a file — Chat can run one **read-only command** on a machine over SSH, as Vaier's login user, without sudo. Only commands that look are allowed (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show` and the like). Chaining, redirects, unquoted wildcards, recursive greps and anything naming or printing a secret are refused.
 
 ## The internet
 
@@ -74,7 +74,7 @@ An errand can propose the same actions a card can, including writes to a service
 
 ## Memory
 
-Chat keeps a **memory** of short facts about the fleet. It never treats one as an instruction. The pane's **Marvin** menu → "What Marvin remembers (N)" lists every memory with a remove button.
+Chat keeps a **memory** of short facts about the fleet. It never treats one as an instruction. Once an answer has read a web page, a search, a machine's output or a service, Marvin keeps, forgets and schedules nothing in that answer, and opens only pages a search found: text like that can carry somebody else's instructions. Ask him in your own words and he will. The pane's **Marvin** menu → "What Marvin remembers (N)" lists every memory with a remove button.
 
 ## Spend
 
