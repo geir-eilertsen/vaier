@@ -33,7 +33,7 @@ Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER
    | Field | Value |
    |---|---|
    | Host | `smtp.gmail.com` |
-   | Port | `587` (Vaier uses STARTTLS; 465 will not work) |
+   | Port | `587` (or `465`; Vaier never sends your password unencrypted) |
    | Username | your full Gmail address |
    | Password | the app password, spaces or not — never your Google password |
    | Sender | the same Gmail address (Gmail replaces any other) |
