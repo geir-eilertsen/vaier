@@ -463,6 +463,8 @@ services:
       # parsers (geoip-enrich, the private-IP whitelist, ...); mounting the whole directory would
       # shadow all of them. Vaier's SecurityService writes this file; vaier-init pre-touches it.
       - ./crowdsec/whitelist/vaier-trusted-networks.yaml:/etc/crowdsec/parsers/s02-enrich/vaier-trusted-networks.yaml:ro
+      # #457: rendered by vaier-init; keeps the bouncer's own refusals from renewing a ban.
+      - ./crowdsec/whitelist/vaier-edge-refusals.yaml:/etc/crowdsec/parsers/s02-enrich/vaier-edge-refusals.yaml:ro
       # Escalating-ban policy: a single-file mount over the image's default profiles.yaml, same
       # reasoning as the whitelist above — the full /etc/crowdsec dir mount still carries every hub
       # parser and scenario; this replaces only the one file that decides ban DURATION. The image
@@ -631,6 +633,18 @@ services:
         # (crowdsec depends_on this container completing).
         mkdir -p /crowdsec-whitelist
         touch /crowdsec-whitelist/vaier-trusted-networks.yaml
+        # #457: a request Traefik refused before any app saw it — the bouncer's own 403, above all —
+        # is not evidence of an attack. Counted, every request a ban turned away renewed the ban, and
+        # an app that retries on a timer kept its owner banned for good. A 403 with no origin status
+        # is exactly that: no backend answered.
+        cat > /crowdsec-whitelist/vaier-edge-refusals.yaml <<'VAIER_EDGE_REFUSALS'
+        name: vaier/edge-refusals
+        description: Requests Traefik refused before any app answered (#457)
+        whitelist:
+          reason: refused at the edge, never reached an app
+          expression:
+            - evt.Unmarshaled.traefik != nil && int(evt.Unmarshaled.traefik.DownstreamStatus) == 403 && int(evt.Unmarshaled.traefik.OriginStatus) == 0
+        VAIER_EDGE_REFUSALS
         chown -R 1000:1000 /crowdsec-whitelist
         # Escalating repeat-offender bans. Rendered here so the committed docker-compose.yml is the
         # one source of truth (crowdsec/profiles/ is gitignored, like traefik/). Single-file-mounted
