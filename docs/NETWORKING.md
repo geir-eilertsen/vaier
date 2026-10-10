@@ -84,7 +84,7 @@ The private key never leaves the device, so there is nothing to save.
 
 ### Fleet DNS
 
-Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tunnel. Its own password is off, so publish its admin page only behind social login, never as public. Through the tunnel a device reaches only that DNS and Vaier's published addresses — never the containers of Vaier's own stack directly.
+Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tunnel. Its own password is off, so publish its admin page only behind social login, never as public; only admins can open it. Through the tunnel a device reaches only that DNS and Vaier's published addresses — never the containers of Vaier's own stack directly.
 
 ---
 
@@ -118,7 +118,7 @@ A name too close to an existing one is refused: `printer-colina27` beside `print
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a **+ Publish** row.
 - A LAN server behind a relay has a **Publish LAN port** form.
-- On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login.
+- On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
 
 For auth modes and who can reach a service, see [`docs/AUTH.md`](AUTH.md).
 
