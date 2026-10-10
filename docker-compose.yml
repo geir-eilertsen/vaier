@@ -290,11 +290,10 @@ services:
             WG_IP=$$(getent hosts wireguard | awk '{print $$1}')
             if [ -n "$$WG_IP" ]; then
               ip route replace 10.13.13.0/24 via "$$WG_IP" 2>/dev/null || true
-              for f in /wireguard-config/*/*.conf; do
-                [ -f "$$f" ] || continue
-                cidr=$$(grep -oE '"lanCidr" *: *"[^"]+"' "$$f" 2>/dev/null | head -1 | sed -E 's/.*"lanCidr" *: *"([^"]+)".*/\1/')
+              # Vaier's key-free list of the fleet's LANs (#477) — never the peer configs, which hold keys.
+              [ -f /lan-routes/lan-cidrs ] && while read -r cidr; do
                 [ -n "$$cidr" ] && ip route replace "$$cidr" via "$$WG_IP" 2>/dev/null || true
-              done
+              done < /lan-routes/lan-cidrs
             fi
             sleep 15
           done
@@ -388,7 +387,7 @@ services:
     volumes:
       - ./traefik/config:/traefik/config
       - ./traefik/acme:/traefik/acme
-      - ./wireguard/config:/wireguard-config:ro
+      - ./vaier/lan-routes:/lan-routes:ro
       - ./traefik/logs:/traefik/logs
       # The downloaded bouncer plugin, kept so a restart never depends on the plugin registry.
       - ./traefik/plugins-storage:/plugins-storage
@@ -555,21 +554,20 @@ services:
       # a NET_ADMIN host-netns container full control of the daemon that docker-socket-proxy exists to fence off.
       WG_IP: *wireguard-bridge-ip
     volumes:
-      - ./wireguard/config:/wireguard-config:ro
+      - ./vaier/lan-routes:/lan-routes:ro
     entrypoint:
       - /bin/bash
       - -c
       - |
         while true; do
           if [ -n "$$WG_IP" ]; then
-            for f in /wireguard-config/*/*.conf; do
-              [ -f "$$f" ] || continue
-              cidr=$$(grep -oE '"lanCidr" *: *"[^"]+"' "$$f" 2>/dev/null | head -1 | sed -E 's/.*"lanCidr" *: *"([^"]+)".*/\1/')
+            # Vaier's key-free list of the fleet's LANs (#477) — never the peer configs, which hold keys.
+            [ -f /lan-routes/lan-cidrs ] && while read -r cidr; do
               if [ -n "$$cidr" ]; then
                 ip route show "$$cidr" 2>/dev/null | grep -q "via $$WG_IP" || \
                   ip route replace "$$cidr" via "$$WG_IP" 2>/dev/null || true
               fi
-            done
+            done < /lan-routes/lan-cidrs
           fi
           sleep 15
         done
@@ -623,9 +621,12 @@ services:
         set -e
         # Vaier container runs as UID 1000 (Dockerfile USER directive). Bind mounts inherit
         # host ownership, so we chown the config dirs once on every start.
-        for d in /vaier/config /traefik/config /wireguard/config /icons; do
+        for d in /vaier/config /traefik/config /wireguard/config /icons /vaier-lan-routes; do
           [ -d "$$d" ] && chown -R 1000:1000 "$$d"
         done
+        # #477: a peer config holds its preshared key (and a server-made peer's private key). Vaier writes
+        # new ones owner-only; this closes up the ones written before it did.
+        find /wireguard/config -mindepth 2 -maxdepth 2 -name '*.conf' -exec chmod 600 {} +
         # #329: crowdsec bind-mounts this exact file (read-only, single-file mount) into its
         # parsers/s02-enrich stage dir. A file that doesn't exist yet on the host makes Docker
         # silently create a DIRECTORY at both ends instead — breaking both Vaier's write and
@@ -680,6 +681,7 @@ services:
       - ./icons:/icons
       - ./crowdsec/whitelist:/crowdsec-whitelist
       - ./crowdsec/profiles:/crowdsec-profiles
+      - ./vaier/lan-routes:/vaier-lan-routes
     restart: "no"
 
   vaier:
@@ -755,6 +757,8 @@ services:
       - ./traefik/config:/traefik/config
       - ./wireguard/config:/wireguard/config
       - ./vaier/config:/vaier/config
+      # Written by Vaier, read by traefik and host-lan-routes: the fleet's LAN CIDRs and nothing else.
+      - ./vaier/lan-routes:/vaier/lan-routes
       - ./geoip:/geoip:ro
       # Resolved service icons — read-write so a resolved icon is fetched online once then served
       # from disk across restarts (icon.cache.path).
