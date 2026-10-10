@@ -245,6 +245,20 @@ services:
             vaier-frame-guard:
               headers:
                 customFrameOptionsValue: SAMEORIGIN
+            # #442: LAST on every route Vaier writes to a published app, after the sign-in has read the
+            # cookie. oauth2-proxy's cookie is scoped to the whole domain, so without this every app
+            # would receive the operator's session — and could replay it against the console. Its
+            # value is blanked (the plugin cannot drop a cookie outright); the split _0/_1 halves and
+            # the CSRF cookie go too. Never on oauth2-proxy's own routes, which need it.
+            vaier-session-guard:
+              plugin:
+                htransformation:
+                  Rules:
+                    - Name: blank-vaier-session
+                      Header: '^Cookie$$'
+                      Value: '^(_oauth2_proxy[^=]*)=.*$$'
+                      ValueReplace: '$$1='
+                      Type: RewriteValueRule
         tls:
           options:
             # `default` is Traefik's implicit option set: every router that does not name one inherits
@@ -354,6 +368,9 @@ services:
       # other upstream. Fetched from the plugin registry once and kept in plugins-storage.
       - --experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
       - --experimental.plugins.bouncer.version=v1.7.1
+      # The session guard (vaier-session-guard above). Pinned the same way.
+      - --experimental.plugins.htransformation.modulename=github.com/tomMoulard/htransformation
+      - --experimental.plugins.htransformation.version=v0.4.1
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}

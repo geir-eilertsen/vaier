@@ -77,6 +77,8 @@ A first-time sign-in mails every admin (if SMTP is configured).
 
 Each published service card has an **auth mode** picker: **Public** (no sign-in) or **Social** (Google or GitHub sign-in, with Vaier deciding who's approved). Change it any time.
 
+Either way, a published service never receives your Vaier sign-in: Vaier blanks it on the way in, so an app you don't fully trust cannot use it to reach the console. An app that keeps its own login is not affected.
+
 ## Per-service access rules
 
 For a **Social** service, open its entry in the **Explorer** and use the **Allowed groups** chip picker. Empty means any approved user gets in. With groups set, only users holding at least one of them (plus admins) get in, and the service shows a **restricted** badge. Path-scoped services sharing one subdomain share one rule.
