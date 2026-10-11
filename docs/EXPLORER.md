@@ -103,7 +103,7 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 
 - **View** images, PDFs, text and video in a new tab. HTML and SVG are download-only.
 - **Download** a file, or a zip of a folder or several items.
-- **Transfer** a file or folder to another machine, with live progress.
+- **Transfer** a file or folder to another machine, with live progress. Something of the same name already there is never replaced without asking; a restore from the past puts the past back without asking.
 - **Upload** by dropping files on the folder or with **Upload files**. Files only. An existing name is never replaced without asking.
 - **Delete** behind a typed machine-name confirmation. It cannot be undone.
 
