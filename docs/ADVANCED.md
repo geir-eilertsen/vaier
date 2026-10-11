@@ -33,7 +33,7 @@ Sign-in providers and mail are set later in the console — Google or GitHub und
 
 ## Removing Vaier
 
-`uninstall.sh` removes the stack's containers, networks and images, the routes Vaier added on the host, the install folder, and Vaier's files in your home folder (plus the backup client's sudoers rule and the SSH keys Vaier made, if present). It finds the stack through Docker's own labels, so it works after the folder is gone. It asks before removing anything; `VAIER_UNINSTALL_DRY_RUN=1` only prints what it would do. Docker itself, your DNS record and firewall rules are left to you.
+`uninstall.sh` removes the stack's containers, networks and images, the routes Vaier added on the host, the install folder (unless it is your home folder or a git checkout, which it leaves for you), and Vaier's files in your home folder (plus the backup client's sudoers rule and the SSH keys Vaier made, if present). It finds the stack through Docker's own labels, so it works after the folder is gone. It asks before removing anything; `VAIER_UNINSTALL_DRY_RUN=1` only prints what it would do. Docker itself, your DNS record and firewall rules are left to you.
 
 ---
 

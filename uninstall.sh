@@ -46,9 +46,18 @@ if [ "${#docker[@]}" -gt 0 ]; then
   mapfile -t volumes < <("${docker[@]}" volume ls -q "${filter[@]}")
 fi
 workdir="${workdir:-$HOME/vaier}"
+# The install folder goes whole — unless it is a place that holds more than Vaier. Started from a git
+# checkout, or from the home folder itself, it is somebody's work, and a blanket rm -rf would take all of it.
+keep_reason=''
+case "${workdir%/}" in
+  ''|/) keep_reason="it is the root folder" ;;
+  "${HOME%/}") keep_reason="it is your home folder" ;;
+esac
+if [ -z "$keep_reason" ] && $sudo test -e "$workdir/.git"; then keep_reason="it is a git checkout"; fi
 mapfile -t routes < <(ip route 2>/dev/null | awk -v gw="$WG_BRIDGE_IP" '$2 == "via" && $3 == gw { print $1 }')
 files=()
 for f in "$workdir" "$HOME/.vaier-upgrade" "$HOME/.vaier-backup" /var/lib/vaier-backup /etc/sudoers.d/vaier-borg; do
+  [ "$f" = "$workdir" ] && [ -n "$keep_reason" ] && continue
   if $sudo test -e "$f"; then files+=("$f"); fi
 done
 keys=0
@@ -59,6 +68,7 @@ say "Vaier on this machine (compose project '$project'):"
 printf '   %-22s %s\n' containers "${#containers[@]}" images "${#images[@]}" networks "${#networks[@]}" \
   volumes "${#volumes[@]}" "routes via $WG_BRIDGE_IP" "${#routes[@]}" "keys Vaier made" "$keys"
 for f in "${files[@]}"; do printf '   %-22s %s\n' file "$f"; done
+[ -n "$keep_reason" ] && printf '   %-22s %s\n' kept "$workdir — $keep_reason; remove what you no longer want yourself"
 if [ "${#containers[@]}${#images[@]}${#networks[@]}${#volumes[@]}${#routes[@]}${#files[@]}" = 000000 ] && [ "$keys" = 0 ]; then
   say "Nothing of Vaier's is left here."; exit 0
 fi
