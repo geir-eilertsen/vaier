@@ -85,7 +85,7 @@ For a **Social** service, open its entry in the **Explorer** and use the **Allow
 
 ## Service credentials
 
-Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs Social auth mode (*Only people who sign in to Vaier* under **Who can open it**).
+Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs Social auth mode (*Only people who sign in to Vaier* under **Who can open it**). It also needs an address of its own: on an address shared by more than one service behind social login, a login would reach every one of them, so Vaier will not set or send it. Unpublishing a service drops the logins set on its address.
 
 - **Shared** — for everyone without their own; all of them are one user to the service.
 - **Personal** — for one person, so the service can tell them apart.
