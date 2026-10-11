@@ -718,6 +718,7 @@ services:
       # VAIER_TZ in .env (e.g. Europe/Oslo) to schedule in your own local time.
       TZ: ${VAIER_TZ:-UTC}
       VAIER_DOMAIN: ${VAIER_DOMAIN:-}
+      ACME_EMAIL: ${ACME_EMAIL:-}
       VAIER_PUBLIC_HOST: ${VAIER_PUBLIC_HOST:-}
       VAIER_PUBLIC_IP: ${VAIER_PUBLIC_IP:-}
       # Override the auto-detected LAN/VPC subnet (EC2 IMDS detects only the server's own /20).
