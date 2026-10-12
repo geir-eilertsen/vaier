@@ -57,9 +57,7 @@ Every page of a machine has the same top: its name (and a dot for how it is), **
 | **Storage** | `disk` | its disks |
 | **Backups** | `backup` | its backup, or the fleet's backups when it is the backup server; the tab shows a failed run |
 
-Files and Storage are greyed, with the reason on hover, when Vaier can't sign in. **Shell** opens a window, and is greyed for the same reason.
-
-The Overview says what needs doing in two lists of the same shape, each row a sentence and at most one button: **Needs you** (trouble, red or amber) and **What to do next** (offers, such as **Let Vaier sign in**, Vaier's suggestions for the machine, or "4 updates waiting · none urgent" with **Install OS updates**). Nothing to say draws nothing.
+Files and Storage are greyed, with the reason on hover, when Vaier can't sign in. **Shell** opens a window, and is greyed for the same reason. On the Overview, when updates wait, a line such as "4 updates waiting · none urgent" carries **Install OS updates**.
 
 The **⋯** menu holds **Edit details**, **Send its setup again**, **Give it new keys**, **Install OS updates**, and **Remove machine** last, in red. Each page of a published service or a backup has the same **⋯** menu, with whatever can undo work last and in red; anything that asks first does so in place.
 
