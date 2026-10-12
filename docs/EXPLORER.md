@@ -6,12 +6,12 @@ The Explorer, at `/explorer.html`, is one address space for the whole fleet. Eve
 
 ---
 
-## The front door and the menu
+## The front door and the navigation bar
 
-Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`. The button at the top left switches between the two: a globe in the fleet, the Vaier mark on the Launchpad.
+Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`.
 
-- Your avatar, at the topbar's right end, holds **Sign out**.
-- The **Vaier menu** holds **People**, **Security**, **Chat** (while an Anthropic key is stored), **Settings** and, at its foot, **Concepts**, the in-app glossary.
+- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, and at the foot of the screen on a phone. Admins see it on the Launchpad too; nobody else does.
+- Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
 - **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk alert level and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
 ---
@@ -73,7 +73,7 @@ A healthy **machine card** says almost nothing: what the machine is and your des
 
 A machine Vaier hasn't read yet shows no disk mark. That is not a claim the disk has room.
 
-People, Security, Chat and Settings live in the **Vaier menu**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
+People, Security, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
 
 ![The fleet's Map: one marker per site, each joined to the Vaier server by its tunnel, with a site opened to list its machines](vaier-map.png)
 
@@ -151,7 +151,7 @@ The **Topology** draws the fleet as a painted coast under the real sky. Hover an
 
 ## Security
 
-**Security**, in the **Vaier menu**, lists who the [edge's CrowdSec bouncer](NETWORKING.md#edge-hardening) is keeping out right now: what each address tried, its country, and how long it stays out.
+**Security**, in the **navigation bar**, lists who the [edge's CrowdSec bouncer](NETWORKING.md#edge-hardening) is keeping out right now: what each address tried, its country, and how long it stays out.
 
 - **Lift the block** lets the address in now. It is blocked again if it misbehaves.
 - **Trust this address** lifts the block and never blocks it again. This takes effect at CrowdSec's next restart, which Vaier won't do for you.

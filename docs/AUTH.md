@@ -59,7 +59,7 @@ A CrowdSec ban on your own address does not stop you signing in: the console is 
 
 ## Access management
 
-Manage who can sign in from **People** in the Vaier menu. Each identity — Google, GitHub or the first-run account — has a **role** (pending → user → admin) and free-form **access groups**. People has three parts:
+Manage who can sign in from **People** in the navigation bar. Each identity — Google, GitHub or the first-run account — has a **role** (pending → user → admin) and free-form **access groups**. People has three parts:
 
 - **Waiting to be let in** — shown only while someone waits: **Let in**, **Let in as admin**, **Turn away**.
 - **People** — admins first, then users. The **…** menu offers **Make an admin** / **Make a user**, **Change groups** and **Remove access**. **Add a person** lets someone in before their first sign-in.
