@@ -100,6 +100,8 @@ If the scan finds nothing, use **Add by address instead**. An address another ma
 
 Then run the host's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
 
+A peer that is the only way to reach some LAN servers can't be removed, or have its network changed to one that leaves them out, until those LAN servers are removed.
+
 For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCED.md).
 
 ---
@@ -133,7 +135,7 @@ bmp.yourdomain.com/auth/*  →  http://rig.yourdomain.com:8090/auth/*
 
 ### Publishing a port that is not a website
 
-Choose **raw TCP** instead of **website** to publish a **stream**: clients connect over TLS to e.g. `mqtt.example.com:443`. The port you enter is the backend port.
+Choose **raw TCP** instead of **website** to publish a **stream**: clients connect over TLS to e.g. `mqtt.example.com:443`. The port you enter is the backend port. A stream takes its whole name, so it can't share a subdomain with website routes.
 
 **A stream cannot be put behind a login, and CrowdSec does not watch it.** Publish one only for a service whose own password you trust. If the client can't speak TLS, reach the service over the VPN at its LAN address instead.
 

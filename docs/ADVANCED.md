@@ -92,8 +92,8 @@ A *LAN server* is any machine that isn't itself a VPN peer — a NAS, a printer,
 1. Make sure its address is covered by something Vaier routes to:
    - **Behind a relay peer:** Vaier offers the peer's network on that machine's page — "Colina 27 sits on 192.168.1.0/24" — usually one click. For a network it can't see, set it under **Advanced → Network behind it** in the machine's edit form.
    - **In the Vaier server's own subnet:** on EC2 the subnet is auto-detected. To cover the whole VPC (e.g. `172.31.0.0/16`), or off EC2, set `VAIER_SERVER_LAN_CIDR`. Allow inbound from the Vaier server in the machine's security group or firewall.
-2. (Docker only) Expose the LAN server's Docker socket on TCP 2375, firewalled to the LAN/VPC range (no TLS). The Add Machine modal shows the one-liner: `curl https://vaier.<domain>/lan-servers/docker-setup.sh | sudo bash -s -- --port 2375`.
-3. In Vaier → Machines, click **+**, pick **LAN server**, enter a name and the LAN address, and toggle Docker on or off.
+2. Add it: **Add a machine** → *Something already on one of my networks* (or **Add by address instead**), with Docker on or off.
+3. Run its single-use **setup link** with `sudo` on the machine. With Docker on, it opens the Docker API on TCP 2375 to the fleet only (no TLS), and it adds the routes back to the rest of your network.
 4. With Docker on, its containers appear in the discovered list and can be published. For a native service, use Services → **+ Publish LAN service**: pick the machine, enter port, subdomain and protocol. No DNS step.
 
 > **Limitation:** the "Vaier server's own subnet" path doesn't yet let *split-tunnel server peers* reach that subnet. Full-tunnel mobile and Windows clients already can.
