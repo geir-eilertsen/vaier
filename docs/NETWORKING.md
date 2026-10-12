@@ -2,7 +2,7 @@
 
 Back to [README](../README.md).
 
-![Your services: every published service, grouped by machine](vaier-services.jpg)
+![The Launchpad: every published service, grouped by machine](vaier-services.jpg)
 
 ---
 
@@ -69,7 +69,7 @@ A server peer's config is shown **exactly once**, at creation. Save what you nee
 
 This is the only way a phone or a Windows PC joins.
 
-1. On the device, open **Your services** and use the **Install card** — no store, no account. The app already knows your Vaier's address.
+1. On the device, open the **Launchpad** and use the **Install card** — no store, no account. The app already knows your Vaier's address.
 2. In the app, ask to join. It shows a four-digit **join code**.
 3. Approve it under **Waiting to join** on the fleet page, or from the mail admins receive.
 
@@ -141,7 +141,7 @@ Choose **raw TCP** instead of **website** to publish a **stream**: clients conne
 
 ---
 
-## Your services
+## Launchpad
 
 A public page that links to your published services, switching to LAN URLs when you're on the same network. Strangers see only public services. Signed-in users also see the social-login services they may reach; admins see all.
 

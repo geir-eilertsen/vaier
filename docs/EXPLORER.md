@@ -8,10 +8,10 @@ The Explorer, at `/explorer.html`, is one address space for the whole fleet. Eve
 
 ## The front door and the menu
 
-Your Vaier's address takes an admin to the **Fleet** and everyone else to **Your services**, the page of tiles (still at `/launchpad.html`). The Vaier logo always leads back there.
+Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`. The button at the top left switches between the two: a globe in the fleet, the Vaier mark on the Launchpad.
 
 - Your avatar, at the topbar's right end, holds **Sign out**.
-- The **Vaier menu** holds **Your services**, **People**, **Security**, **Chat** (while an Anthropic key is stored), **Settings** and, at its foot, **Concepts**, the in-app glossary.
+- The **Vaier menu** holds **People**, **Security**, **Chat** (while an Anthropic key is stored), **Settings** and, at its foot, **Concepts**, the in-app glossary.
 - **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk alert level and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
 ---
@@ -87,7 +87,7 @@ Folders are read over SFTP as you open them, using the machine's stored credenti
 
 Vaier cannot start, stop or read logs — use the shell. Its one action is **Update** on an out-of-date container started by compose: it pulls the new image, recreates the container and removes the old image. A container on a **moving tag** (a daily `latest`) is marked `moving` and never mailed about.
 
-**Websites** lists published services. A route in trouble reads **Not answering**. Unpublished containers appear under **Ready to publish**, and **Publish a service by hand** covers anything else. Opening a service gives **Open** and four blocks: **Who can open it**, **Sign people in for it**, **In Your services**, and folded **Details**. **Unpublish this service** comes last and leaves the container running. See [NETWORKING](NETWORKING.md).
+**Websites** lists published services. A route in trouble reads **Not answering**. Unpublished containers appear under **Ready to publish**, and **Publish a service by hand** covers anything else. Opening a service gives **Open** and four blocks: **Who can open it**, **Sign people in for it**, **On the Launchpad**, and folded **Details**. **Unpublish this service** comes last and leaves the container running. See [NETWORKING](NETWORKING.md).
 
 ### Disk
 
