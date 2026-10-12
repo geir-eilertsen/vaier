@@ -59,7 +59,7 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 
 A door is greyed, with the reason on hover, when Vaier can't sign in. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Send its setup again**, **Give it new keys**, and **Remove machine** last, in red.
+Who Vaier signs in as (**Change**, **Stop Vaier signing in here**) and the addresses sit in one closed fold, **Sign-in and details**. Every action is in the **⋯** menu at the top of the page: **Edit details**, **Send its setup again**, **Give it new keys**, **Install OS updates**, and **Remove machine** last, in red. Each page of a published service or a backup has the same **⋯** menu, with whatever can undo work last and in red; anything that asks first does so in place.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
