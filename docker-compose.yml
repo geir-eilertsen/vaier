@@ -825,7 +825,7 @@ services:
       # anonymous caller (the page treats that as anonymous and falls back to /launchpad/services).
       # NO oauth2-signin (so no forced-login redirect) and NO vaier-authz (so no admin gate): a
       # signed-in non-admin can read its own identity and its own reachable tiles.
-      - traefik.http.routers.vaier-identity.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/launchpad/services-authenticated`) || Path(`/users/me`) || Path(`/published-services/events`))
+      - traefik.http.routers.vaier-identity.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/launchpad/services-authenticated`) || Path(`/users/me`))
       - traefik.http.routers.vaier-identity.entrypoints=websecure
       - traefik.http.routers.vaier-identity.tls.certresolver=letsencrypt
       - traefik.http.routers.vaier-identity.middlewares=oauth2-authn@file,vaier-down,vaier-frame-guard@file
