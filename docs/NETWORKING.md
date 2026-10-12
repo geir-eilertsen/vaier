@@ -96,7 +96,7 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 2. Pick **where it is** (**At <name>**) and Vaier scans that LAN.
 3. Pick a host and type a name. If it speaks SSH, attach and **test** a credential.
 
-If the scan finds nothing, use **Add by address instead**.
+If the scan finds nothing, use **Add by address instead**. An address another machine already has is refused — remove or fix that one first.
 
 Then run the host's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
 

@@ -40,6 +40,8 @@ Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER
 
 4. Type your address as the test recipient and press **Send test email**. A failed test says why; `535` means the username or app password is wrong.
 
+Later, a blank password keeps the stored one — but only for the same host and username. Change either and type the password again.
+
 ---
 
 ## Host disk monitoring
