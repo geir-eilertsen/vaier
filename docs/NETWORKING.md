@@ -102,6 +102,8 @@ Then run the host's single-use **setup link** with `sudo`. It opens the Docker A
 
 A peer that is the only way to reach some LAN servers can't be removed, or have its network changed to one that leaves them out, until those LAN servers are removed.
 
+A relay's network must be its own LAN: Vaier refuses one wider than a `/8`, one overlapping another relay's, and one overlapping the VPN's own addresses, Vaier's Docker network or the Vaier server's network, because routing any of those would cut every machine off.
+
 For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCED.md).
 
 ---

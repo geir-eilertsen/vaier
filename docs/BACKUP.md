@@ -64,13 +64,14 @@ To turn it back **off**, untick *Back up files owned by other users* under **Adv
 
 ### Running
 
-Press **Run now** on the machine's `backup` entry, or let the **nightly schedule** run every enabled job. Set its hour (default 2) in **Settings**. A machine runs one backup at a time.
+Press **Run now** on the machine's `backup` entry, or let the **nightly schedule** run every enabled job. Set its hour (default 2) in **Settings**. A night whose hour was missed — Vaier was down, or the clocks went forward — runs later that day. A machine runs one backup at a time.
 
 Each **backup run** ends as success, warnings, **incomplete**, failed, or unknown.
 
 - **Incomplete** — some source files couldn't be read. The archive has holes, so this counts as a **failure**: red in the Explorer and a *Backup incomplete* mail naming the lost files.
 - **Warnings** — borg grumbled but lost nothing (a file changed while read). Not a failure; no mail.
-- **Failed** — including a run that never started (no SSH access, no credential, no borg). Emails every admin once, and again when the job recovers.
+- **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers.
+- **Unknown** — the run ended without a result, usually because the machine restarted. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure.
 
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 
