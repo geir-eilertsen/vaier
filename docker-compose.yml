@@ -1150,11 +1150,16 @@ services:
 
         first_run=/vaier/config/first-run-password
 
+        # Rendered beside the live config and moved over it only once whole (#499): a failed apk below
+        # must leave Dex the config it had, not one with no way in.
+        cfg=/dex/config/config.yaml.new
+        trap 'rm -f "$${cfg}"' EXIT
+
         # Unquoted heredocs: the shell substitutes $${VAIER_DOMAIN}, $${VAIER_DEX_CLIENT_SECRET} and
         # each configured provider's client id/secret; the config body contains no other $$ so
         # nothing else is interpolated. Each configured provider's block is appended in its own
         # heredoc, so an unconfigured provider's block is simply never written.
-        cat > /dex/config/config.yaml <<EOF
+        cat > "$${cfg}" <<EOF
         issuer: https://dex.$${VAIER_DOMAIN}
         storage: {type: memory}
         web: {http: 0.0.0.0:5556}
@@ -1190,7 +1195,7 @@ services:
           # fetches apache2-utils for htpasswd.
           apk add --no-cache -q apache2-utils >/dev/null
           hash="$$(htpasswd -nbBC 10 "" "$${secret}" | cut -d: -f2)"
-          cat >> /dex/config/config.yaml <<EOF
+          cat >> "$${cfg}" <<EOF
         enablePasswordDB: true
         staticPasswords:
         - email: $${email}
@@ -1202,11 +1207,11 @@ services:
           rm -f "$${first_run}"
         fi
         if [ "$${google_ok}" = 1 ] || [ "$${github_ok}" = 1 ]; then
-          echo "connectors:" >> /dex/config/config.yaml
+          echo "connectors:" >> "$${cfg}"
         fi
 
         if [ "$${google_ok}" = 1 ]; then
-          cat >> /dex/config/config.yaml <<EOF
+          cat >> "$${cfg}" <<EOF
         - type: google
           id: google
           name: Google
@@ -1215,7 +1220,7 @@ services:
         fi
 
         if [ "$${github_ok}" = 1 ]; then
-          cat >> /dex/config/config.yaml <<EOF
+          cat >> "$${cfg}" <<EOF
         - type: github
           id: github
           name: GitHub
@@ -1223,7 +1228,8 @@ services:
         EOF
         fi
 
-        chown 1001:1001 /dex/config/config.yaml
+        chown 1001:1001 "$${cfg}"
+        mv "$${cfg}" /dex/config/config.yaml
     volumes:
       - ./dex/config:/dex/config
       - ./vaier/config:/vaier/config
