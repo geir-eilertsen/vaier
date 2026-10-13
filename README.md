@@ -4,7 +4,7 @@
 
 # Vaier
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/getvaier/vaier)](https://hub.docker.com/r/getvaier/vaier)
+[![Docker Pulls](https://img.shields.io/docker/pulls/geireilertsen/vaier)](https://hub.docker.com/r/geireilertsen/vaier)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 
 **Vaier** (Norwegian for *wire*, said **VY-er**) is the glue for your homelab: one server on the internet, your machines at home behind WireGuard, and every service one click from its own HTTPS address and login.

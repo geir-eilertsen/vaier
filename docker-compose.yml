@@ -685,7 +685,7 @@ services:
     restart: "no"
 
   vaier:
-    image: getvaier/vaier:latest
+    image: geireilertsen/vaier:latest
     container_name: vaier
     # The JVM sizes its heap from the cgroup limit once one exists, so this cap and
     # JAVA_TOOL_OPTIONS below must be read together: 55% of 768m is a ~422 MB heap,

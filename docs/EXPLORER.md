@@ -2,7 +2,7 @@
 
 Back to [README](../README.md).
 
-The Explorer, at `/explorer.html`, is one address space for the whole fleet. Every entry has its own link, and the navigation bar and a page's tabs say where you are.
+The Explorer, at `/explorer.html`, is one address space for the whole fleet. Every entry has its own link, and the address bar says where you are.
 
 ---
 
@@ -10,7 +10,7 @@ The Explorer, at `/explorer.html`, is one address space for the whole fleet. Eve
 
 Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`.
 
-- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, and at the foot of the screen on a phone. Admins see it on the Launchpad too; nobody else does.
+- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
 - Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
 - **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk alert level and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
@@ -46,22 +46,20 @@ Its page says "Switched off on purpose since 14 Sep", with **It's back on**. You
 
 ## The address space
 
-Every page of a machine has the same top: its name (and a dot for how it is), **Shell**, its **⋯** menu, and its tabs. A machine only gets the tabs Vaier can actually reach:
+A machine's page shows its name (plus one line when it is not well), its Needs you rows, and then its **doors**. A machine only gets the doors Vaier can actually reach:
 
-| Tab | Address | What it holds |
-|-----|---------|---------------|
-| **Overview** | the machine | how it is, **What to do next**, who Vaier signs in as and its addresses |
-| **Files** | `files` | its files, with the folder path at the top |
-| **Apps** | `containers` | its containers; the tab shows how many have updates |
-| **Websites** | `services` | what it publishes, and what is ready to publish |
-| **Storage** | `disk` | its disks |
-| **Backups** | `backup` | its backup, or the fleet's backups when it is the backup server; the tab shows a failed run |
+| Door | Entry | Its fact |
+|------|-------|----------|
+| **Shell** | — (opens a window) | "Opens where you left off" |
+| **Files** | `files` | "Browse its files" |
+| **Apps** | `containers` | "8 apps · 1 update" |
+| **Websites** | `services` | "7 websites · 1 ready to publish" |
+| **Storage** | `disk` | "60% full" |
+| **Backups** | `backup` | "Backed up last night", "Paused — switched off" |
 
-Files and Storage are greyed, with the reason on hover, when Vaier can't sign in. **Shell** opens a window, and is greyed for the same reason.
+A door is greyed, with the reason on hover, when Vaier can't sign in. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-The Overview says what needs doing in two lists of the same shape, each row a sentence and at most one button: **Needs you** (trouble, red or amber) and **What to do next** (offers, such as **Let Vaier sign in**, Vaier's suggestions for the machine, or "4 updates waiting · none urgent" with **Install OS updates**). Nothing to say draws nothing.
-
-The **⋯** menu holds **Edit details**, **Send its setup again**, **Give it new keys**, **Install OS updates**, and **Remove machine** last, in red. Each page of a published service or a backup has the same **⋯** menu, with whatever can undo work last and in red; anything that asks first does so in place.
+Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Send its setup again**, **Give it new keys**, and **Remove machine** last, in red.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
@@ -69,7 +67,7 @@ The **⋯** menu holds **Edit details**, **Send its setup again**, **Give it new
 
 ### One pane, at every width
 
-There is no tree column. Drill in through cards, tabs and listings; come back through the tabs, or a folder path inside **Files**. The Fleet's head carries one switch, **Machines · Map · Topology**, and **Add machine**.
+There is no tree column. Drill in through cards and listings; come back through the address bar's crumbs. The Fleet's head carries one switch, **Machines · Map · Topology**, and **Add machine**.
 
 A healthy **machine card** says almost nothing: what the machine is and your description of it ("Storage box · Synology"), and small glyphs for relay, Docker or backup server. **Marks** appear only for trouble — a failed backup, a filling disk, **Claude signed out**, containers wanting a newer image. A machine that is down reddens its whole card.
 
@@ -166,7 +164,7 @@ If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the
 
 ## Web terminal
 
-**Shell**, at the top of every machine page, opens a real SSH shell to the machine, the **Vaier server** included, in its own browser window.
+The **Shell** door opens a real SSH shell to the machine, the **Vaier server** included, in its own browser window.
 
 - It returns to the shell you last used on that machine, from any device. **Duplicate** opens a fresh one.
 - Shells run in tmux, so closing the window or a redeploy only disconnects. Only **Exit shell** ends one.
