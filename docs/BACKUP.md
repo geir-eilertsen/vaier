@@ -38,7 +38,7 @@ The server's `backup` entry has **Server details** and, under the fold *Provisio
 
 ## Backup repository
 
-You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, append-only setting, stored passphrase and archives, with **Edit** and **Delete**. Delete forgets it in Vaier; it does not erase the archives.
+You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, append-only setting, stored passphrase and archives, with **Edit** and **Forget these backups**. Forgetting is offered once no machine backs up there; it does not erase the archives.
 
 - A name may hold only letters, digits, `_` and `-`; "NUC 02" becomes `NUC-02`.
 - A new repository's passphrase is shown once with a copy button. Save it — it is never shown again.
