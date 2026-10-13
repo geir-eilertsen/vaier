@@ -18,6 +18,8 @@ Traefik → oauth2-proxy → Dex ─┬→ Google
                               └→ local (the first-run password, while no provider exists)
 ```
 
+The console keeps a sign-in of its own, separate from the one your published apps share, so no app ever receives a session that could open Vaier. You sign in once; the second is a redirect you don't see. **Sign out** ends both.
+
 ### The first-run password, before you have registered anything
 
 A stack with **no provider configured** still starts, with one door for one account. Vaier prints the console URL, the email and the password at the bottom of its boot log:
