@@ -15,7 +15,7 @@ Open a machine's files in the **Explorer**, tick the folders you would want back
 - runs every night;
 - emails the admins only when a run fails or came back with holes.
 
-**Back up more** takes you back to the files. **Stop backing up** removes a path; when the last one goes, the machine's job goes too. Archives already made are kept, and its time rail still browses them.
+**Back up more** takes you back to the files. **Stop backing up** removes a path; when the last one goes, the machine's job goes too. Archives already made are kept, and its time rail still browses them. Deleting a backed-up folder in the Explorer stops backing it up too. A backed-up folder deleted some other way shows up under **Needs you** after the next run, with **Stop backing it up**.
 
 The archives are [borg](https://www.borgbackup.org/) repositories on the fleet's **backup server**, one per machine. The passphrases live in Vaier and in the **survival kit**.
 
