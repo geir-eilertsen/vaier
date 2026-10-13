@@ -161,6 +161,7 @@ Traefik adds a baseline to every response:
 
 - `nosniff` and `strict-origin-when-cross-origin` **security headers** on every service; a **frame guard** on Vaier's own pages only.
 - An **edge TLS policy**: TLS 1.2 minimum, forward-secret ciphers only.
+- A **rate limit** on Vaier's own public pages (the Launchpad, its icons, joining from the app): an address that keeps asking much faster than anyone browsing is told to slow down.
 
 **CrowdSec** blocks known-malicious traffic, including addresses from its **community blocklist**, on every **published service**. Your **trusted networks** are never blocked. A first ban lasts four hours; repeat bans run longer.
 

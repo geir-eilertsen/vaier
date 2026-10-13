@@ -853,7 +853,12 @@ services:
       # When the Vaier backend itself is unreachable (502/503/504), the vaier-down errors middleware
       # (defined on vaier-offline) serves the branded offline page instead of Traefik's bare "Bad
       # gateway". vaier-public also carries it so unauthenticated public paths degrade gracefully.
-      - traefik.http.routers.vaier-public.middlewares=vaier-down,vaier-frame-guard@file
+      - traefik.http.routers.vaier-public.middlewares=vaier-public-ratelimit,vaier-down,vaier-frame-guard@file
+      # Anonymous, so limited per client address: a page load is a few dozen requests (page, assets, one icon
+      # per tile), which the burst covers whole; a client looping on it is turned away with 429.
+      - traefik.http.middlewares.vaier-public-ratelimit.ratelimit.average=300
+      - traefik.http.middlewares.vaier-public-ratelimit.ratelimit.period=1m
+      - traefik.http.middlewares.vaier-public-ratelimit.ratelimit.burst=100
     networks:
       - vaier-network
 
