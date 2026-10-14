@@ -77,7 +77,7 @@ A run that didn't end cleanly shows its **run diagnostics**: the lines borg repo
 
 Each machine keeps its borg passphrase file in `~/.vaier-backup`. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself.
 
-A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **skipped, not failed**: no run, no red mark, no mail.
+A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **skipped, not failed**: no run, no red mark, no mail. A machine that is merely off or unreachable at the scheduled hour fails that run, and Vaier keeps trying it every 15 minutes for the rest of the day.
 
 ### Archives
 
@@ -89,7 +89,7 @@ Open a **backup repository** entry to list its archives. **Restore from the UI i
 
 Your repository passphrases live inside Vaier, and Vaier's own backup is encrypted with one of them. Lose the Vaier server and nothing left can open your archives.
 
-The **survival kit** fixes that: every repository's address and passphrase, the borg commands to read them, and Vaier's **config key**, encrypted under **one passphrase you choose**. Set it in **Settings → Survival kit** and press **Write the kit now**.
+The **survival kit** fixes that: every repository's address and passphrase, the borg commands to read them, and Vaier's **config key**, encrypted under **one passphrase you choose** (at least 16 characters, since copies sit on your machines). Set it in **Settings → Survival kit** and press **Write the kit now**.
 
 - **Vaier picks the hosts and says why**: reachable servers, never itself, spread across sites. It tells you whether anything written now outlives this server.
 - Each copy is `vaier-survival-kit.txt` (`0600`) in the SSH user's home.
