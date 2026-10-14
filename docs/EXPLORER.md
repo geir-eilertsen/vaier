@@ -12,7 +12,7 @@ Your Vaier's address takes an admin to the **Fleet** and everyone else to the **
 
 - The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
 - Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
-- **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk alert level and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
+- **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk threshold and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
 ---
 
@@ -25,7 +25,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 - an alert mail that did not go out (**Check mail**);
 - a Vaier update that failed or rolled back;
 - a server not answering (**I switched it off**, see below) — phones and laptops that are away are never listed;
-- a backup that went wrong (**Open its backup**, **Get this machine ready**, or **Back up everything**);
+- a backup that went wrong (**Open its backup**, **Get this machine ready**, or **Back up as root**);
 - a disk past or near its threshold (**Open its disk**);
 - security updates waiting (**Install OS updates**);
 - [reverse proxy config](MONITORING.md#reverse-proxy-audit) entries no route can reach (**See which**);
@@ -59,7 +59,7 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 
 A door is greyed, with the reason on hover, when Vaier can't sign in. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Send its setup again**, **Give it new keys**, and **Remove machine** last, in red.
+Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Send its setup again**, and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
@@ -75,7 +75,7 @@ A machine Vaier hasn't read yet shows no disk mark. That is not a claim the disk
 
 People, Security, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
 
-![The fleet's Map: one marker per site, each joined to the Vaier server by its tunnel, with a site opened to list its machines](vaier-map.png)
+![The fleet's Map: one marker per site, each joined to the Vaier server by its tunnel](vaier-map.png)
 
 ### Files
 
@@ -83,7 +83,7 @@ Folders are read over SFTP as you open them, using the machine's stored credenti
 
 ### Containers and published services
 
-**Apps** lists containers with a published port, running or stopped. A stopped one reads **DOWN**; one Vaier saw running and now finds stopped reads **gone**.
+**Apps** lists containers with a port, published or only exposed, running or stopped. A stopped one reads **DOWN**; one Vaier saw running and now finds stopped reads **gone**.
 
 Vaier cannot start, stop or read logs — use the shell. Its one action is **Update** on an out-of-date container started by compose: it pulls the new image, recreates the container and removes the old image. A container on a **moving tag** (a daily `latest`) is marked `moving` and never mailed about.
 
@@ -91,7 +91,7 @@ Vaier cannot start, stop or read logs — use the shell. Its one action is **Upd
 
 ### Disk
 
-**Storage** lists every real filesystem with its usage and threshold. Mute one that is full by design, or give it its own threshold. A new volume is watched by default. See [MONITORING](MONITORING.md).
+**Storage** lists every real filesystem with its usage and threshold. Stop watching one that is full by design, or give it its own threshold; one using the fleet's shows it greyed. A new volume is watched by default. See [MONITORING](MONITORING.md).
 
 ### The backup server's own entry
 
@@ -105,7 +105,7 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 - **Download** a file, or a zip of a folder or several items. Anything Vaier cannot read, and anything that is not an ordinary file (a pipe, socket or broken link), is listed in *Not included.txt* inside the zip.
 - **Transfer** a file or folder to another machine, with live progress. What Vaier cannot read is left out, as in a zip. Something of the same name already there is never replaced without asking; a restore from the past puts the past back without asking.
 - **Upload** by dropping files on the folder or with **Upload files**. Files only. An existing name is never replaced without asking.
-- **Delete** behind a typed machine-name confirmation. It cannot be undone.
+- **Delete**, confirmed by typing the file's name (or, for several, how many). It cannot be undone.
 
 **Every write goes to the present.** Copying *from* an archive and pasting back is how you restore. Verbs Vaier's sign-in can't perform are hidden; an ACL or read-only mount can still make the machine refuse.
 
@@ -185,11 +185,11 @@ Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. In vim, htop or Claude Code, hold **Shi
 
 Store the one SSH login Vaier uses for each machine, a password or a private key, from the machine's page. Secrets are encrypted and never shown back.
 
-**SSH access** turns SSH on or off per machine; off hides Shell, Files and Storage. Machines where Vaier signs in as `root` are tagged. No key? Vaier generates one and shows the line for `authorized_keys`.
+**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. Machines where Vaier signs in as `root` are tagged. No key? Vaier generates one and shows the line for `authorized_keys`.
 
 ### OS updates
 
-Every five minutes Vaier counts waiting updates on apt machines. A machine with updates says so — "2 security updates waiting · 5 in all" — with **Install OS updates**. Security updates also show in **Needs you**.
+Every five minutes Vaier counts the updates an install would put on apt machines; ones Ubuntu is still holding back for a staged rollout wait until it offers them. A machine with updates says so — "2 security updates waiting · 5 in all" — with **Install OS updates**. Security updates also show in **Needs you**.
 
 **Install OS updates** upgrades as root after a confirm (apt or dnf). It removes nothing and **never reboots**; the result says when a reboot is due. Root comes from a root login or `sudo`. A machine without root, or without apt or dnf (a Synology), is refused with the reason. A failure is mailed to the admins. Marvin can propose this too; see [Chat](CHAT.md#acting-with-your-click).
 
@@ -203,6 +203,7 @@ A **fleet credential** is one secret that must exist on every machine: a name, a
 - **Distribute** writes it everywhere and checks it arrived intact.
 - **Withdraw** removes it from the machines. **Delete** only makes Vaier forget it, so withdraw first.
 - Every five minutes Vaier re-writes it where it is missing or out of date.
+- Changing the path of a distributed credential first removes the file at the old path from every machine Vaier can reach.
 
 ### Claude sign-in
 

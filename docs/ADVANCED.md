@@ -43,7 +43,7 @@ Sign-in providers and mail are set later in the console — Google or GitHub und
 |----------|----------|-------------|
 | `VAIER_DOMAIN` | Yes | Base domain (e.g. `yourdomain.com`) |
 | `ACME_EMAIL` | Yes | Let's Encrypt email; first-run account if `VAIER_ADMIN_EMAIL` is blank |
-| `VAIER_TZ` | No | Time zone for schedules, e.g. `Europe/Oslo` (default `UTC`) |
+| `VAIER_TZ` | No | Time zone for schedules, e.g. `Europe/Berlin` (default `UTC`) |
 | `VAIER_OIDC_GOOGLE_CLIENT_ID` | Optional | Google OAuth client id |
 | `VAIER_OIDC_GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
 | `VAIER_OIDC_GITHUB_CLIENT_ID` | Optional | GitHub OAuth App client id |
@@ -90,10 +90,10 @@ Keep `.env` at mode `600`.
 A *LAN server* is any machine that isn't itself a VPN peer — a NAS, a printer, IPMI, an extra Docker host — on a relay peer's LAN or **in the Vaier server's own subnet** (an AWS VPC, say). Register it once, then publish its services.
 
 1. Make sure its address is covered by something Vaier routes to:
-   - **Behind a relay peer:** Vaier offers the peer's network on that machine's page — "Colina 27 sits on 192.168.1.0/24" — usually one click. For a network it can't see, set it under **Advanced → Network behind it** in the machine's edit form.
+   - **Behind a relay peer:** Vaier offers the peer's network on that machine's page — "Cabin sits on 192.168.10.0/24" — usually one click. For a network it can't see, set it under **The network behind this machine** in the machine's edit form.
    - **In the Vaier server's own subnet:** on EC2 the subnet is auto-detected. To cover the whole VPC (e.g. `172.31.0.0/16`), or off EC2, set `VAIER_SERVER_LAN_CIDR`. Allow inbound from the Vaier server in the machine's security group or firewall.
 2. Add it: **Add a machine** → *Something already on one of my networks* (or **Add by address instead**), with Docker on or off.
 3. Run its single-use **setup link** with `sudo` on the machine. With Docker on, it opens the Docker API on TCP 2375 to the fleet only (no TLS), and it adds the routes back to the rest of your network.
-4. With Docker on, its containers appear in the discovered list and can be published. For a native service, use Services → **+ Publish LAN service**: pick the machine, enter port, subdomain and protocol. No DNS step.
+4. With Docker on, its containers appear under **Ready to publish**. For a native service, open the machine's services and use **Publish a service by hand**: enter port, subdomain and protocol. No DNS step.
 
 > **Limitation:** the "Vaier server's own subnet" path doesn't yet let *split-tunnel server peers* reach that subnet. Full-tunnel mobile and Windows clients already can.

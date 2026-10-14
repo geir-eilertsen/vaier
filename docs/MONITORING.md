@@ -4,7 +4,7 @@ Back to [README](../README.md).
 
 What Vaier watches, when it mails you, and what you can do about it. Outside these cases it stays quiet.
 
-![A machine's Storage page: each disk's fill, with its own alert level](vaier-storage.jpg)
+![A machine's Storage page: each disk's fill, with its own threshold](vaier-storage.jpg)
 
 ---
 
@@ -53,7 +53,7 @@ Every five minutes Vaier runs `df` over SSH on every machine it holds a **host c
 - **Recovery needs a margin** of five points below the threshold, so a disk wobbling around the line doesn't mail you daily.
 - Mails carry size: *"[Vaier] NAS /volume1 is at 91% full (10.8 TiB, 1.0 TiB free)"*.
 
-**Threshold** — default **85%**, under Settings → *Disk alerts*. From a machine's **disk** entry in the **Explorer**, give a filesystem its own threshold or **mute** it.
+**Threshold** — default **85%**, under Settings → *Disk alerts*. From a machine's **disk** entry in the **Explorer**, give a filesystem its own threshold, or untick **Watch** to stop watching it. A filesystem using the fleet's threshold shows it greyed, marked *the fleet's*.
 
 Each machine's card in the **Explorer** shows its worst watched filesystem: green, amber closing on its threshold, red over it. An unread machine shows **no mark at all**.
 
@@ -87,7 +87,7 @@ Trouble must show on two consecutive scrapes, so an **Update** or a restart does
 
 **What you see.** The container list says **gone**, **unhealthy** or **restart-looping**, and the machine's pane gets a card under *What to do next* saying when it was last well. It has **no button**: Vaier cannot start or restart containers.
 
-**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Apalveien 5*), one when it is running well again; getting worse earns a new mail. A removed container earns one mail and is forgotten. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
+**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Home*), one when it is running well again; getting worse earns a new mail. A removed container earns one mail and is forgotten. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
 
 ---
 
@@ -96,7 +96,7 @@ Trouble must show on two consecutive scrapes, so an **Update** or a restart does
 Once a day Vaier compares each container's image digest with what its registry serves for the **same tag**. Any Registry v2 host works, no account needed. **The sweep never pulls and never restarts anything.**
 
 - **Vaier's own stack is not watched** — it updates with Vaier; see [Updating Vaier itself](#updating-vaier-itself).
-- **One rollup mail** when images newly go out of date, naming image and machine (`vaultwarden/server:latest on Apalveien 5`).
+- **One rollup mail** when images newly go out of date, naming image and machine (`vaultwarden/server:latest on Home`).
 - An image on a machine that was offline at sweep time, or in a stopped container, keeps what Vaier knew — it isn't mailed again when it's back.
 - A **moving tag** (rebuilt daily, like `netdata/netdata:latest`) keeps its mark, labelled `moving`, but is never mailed.
 - A registry Vaier can't read, a locally built image or a digest-pinned one reads **unknown** and shows no mark — so no mark is not a promise the image is current.
@@ -105,13 +105,13 @@ Out-of-date containers wear a small yellow mark in the **Explorer**. Only the Va
 
 ### Update
 
-An out-of-date container started by compose has an **Update** button. Vaier pulls the new image, recreates that container (briefly down), then removes the old image if nothing else uses it. If the recreate fails, the old container keeps running.
+An out-of-date container started by compose has an **Update** button. Vaier pulls the new image, recreates that container and any other service of its compose project on the same image, such as a worker (briefly down), then removes the old image if nothing else uses it. If the recreate fails, the old container keeps running.
 
 No button for a container started by hand, one in Vaier's own stack, or one on a machine where Vaier's SSH user isn't in the `docker` group — add it, and the button comes back.
 
 ### Updating Vaier itself
 
-**Settings → Update Vaier** updates the whole of Vaier's own stack, compose file included, then runs `docker compose up -d`. If the stack doesn't come up, or Vaier doesn't answer within two minutes, it rolls back and Settings says so. The log is in `~/.vaier-upgrade/last-update.log` on the Vaier server.
+**Settings → Update Vaier** updates the whole of Vaier's own stack, compose file included, then runs `docker compose up -d`. If the stack doesn't come up, or Vaier doesn't answer within two minutes, it rolls back and Settings says so. A step that stalls for many minutes (a hung pull or download) ends the update the same way. The log is in `~/.vaier-upgrade/last-update.log` on the Vaier server.
 
 It never touches your `.env` values or runtime folders (`vaier/config`, `wireguard/config`, `traefik/acme`, …), and it doesn't remove orphan containers. The first update onto this version is image-only.
 

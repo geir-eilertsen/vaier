@@ -43,7 +43,7 @@ Configure Google, GitHub, both, or neither for now. The sign-in page shows a but
 
 Then give Vaier the client id and secret, one of two ways:
 
-- **From People → Sign-in providers.** The section shows the redirect URI with a copy button, a link to each provider's console, and the id and secret fields. **Save** applies it in a few seconds. If it fails, the working config stays and the error shows under the button. The secret is write-only and is stored in `./vaier/config/sign-in-providers.env` (mode `0600`).
+- **From People → Sign-in providers.** The section shows the redirect URI with a copy button, a link to each provider's console, and the id and secret fields. **Save** applies it in a few seconds; once set, it folds to one line with **Change**. If it fails, the working config stays and the error shows under the button. The secret is write-only and is stored in `./vaier/config/sign-in-providers.env` (mode `0600`).
 - **From `.env`.** Set `VAIER_OIDC_GOOGLE_CLIENT_ID` / `VAIER_OIDC_GOOGLE_CLIENT_SECRET` and/or `VAIER_OIDC_GITHUB_CLIENT_ID` / `VAIER_OIDC_GITHUB_CLIENT_SECRET` and run `docker compose up -d`. **`.env` wins**: People then shows that provider read-only as *set in .env*.
 
 `install.sh` generates three secrets into `.env` for you: `VAIER_OAUTH2_COOKIE_SECRET`, `VAIER_DEX_CLIENT_SECRET` and `VAIER_CROWDSEC_BOUNCER_KEY`. If you hand-write `.env`, generate all three — a missing one stops `docker compose` with a message naming it. Re-running `install.sh` in place is simpler: it tops up what is missing and never overwrites a value.
@@ -64,7 +64,7 @@ A CrowdSec ban on your own address does not stop you signing in: the console is 
 Manage who can sign in from **People** in the navigation bar. Each identity — Google, GitHub or the first-run account — has a **role** (pending → user → admin) and free-form **access groups**. People has three parts:
 
 - **Waiting to be let in** — shown only while someone waits: **Let in**, **Let in as admin**, **Turn away**.
-- **People** — admins first, then users. The **…** menu offers **Make an admin** / **Make a user**, **Change groups** and **Remove access**. **Add a person** lets someone in before their first sign-in.
+- **Let in** — everyone with access, admins first, then users. The **…** menu offers **Make an admin** / **Make a user**, **Change groups** and **Remove access**. **Add a person** lets someone in before their first sign-in.
 - **Sign-in providers** — Google and GitHub (above).
 
 A first-time sign-in mails every admin (if SMTP is configured).
@@ -75,19 +75,19 @@ A first-time sign-in mails every admin (if SMTP is configured).
 
 ---
 
-## Per-service auth mode
+## Who can open a service
 
-Each published service card has an **auth mode** picker: **Public** (no sign-in) or **Social** (Google or GitHub sign-in, with Vaier deciding who's approved). Change it any time.
+Each published service's page starts with **Who can open it**: *Anyone — no sign-in*, or *Only people who sign in to Vaier* (Google or GitHub sign-in, with Vaier deciding who's approved). Change it any time.
 
 Either way, a published service never receives your Vaier sign-in: Vaier blanks it on the way in, so an app you don't fully trust cannot use it to reach the console. An app that keeps its own login is not affected.
 
 ## Per-service access rules
 
-For a **Social** service, open its entry in the **Explorer** and use the **Allowed groups** chip picker. Empty means any approved user gets in. With groups set, only users holding at least one of them (plus admins) get in, and the service shows a **restricted** badge. Path-scoped services sharing one subdomain share one rule.
+For a service behind sign-in, open its entry in the **Explorer** and use the **Allowed groups** chip picker. Empty means any approved user gets in. With groups set, only users holding at least one of them (plus admins) get in. Path-scoped services sharing one subdomain share one rule.
 
 ## Service credentials
 
-Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs Social auth mode (*Only people who sign in to Vaier* under **Who can open it**). It also needs an address of its own: on an address shared by more than one service behind social login, a login would reach every one of them, so Vaier will not set or send it. Unpublishing a service drops the logins set on its address.
+Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs *Only people who sign in to Vaier* under **Who can open it**. It also needs an address of its own: on an address shared by more than one service behind social login, a login would reach every one of them, so Vaier will not set or send it. Unpublishing a service drops the logins set on its address.
 
 - **Shared** — for everyone without their own; all of them are one user to the service.
 - **Personal** — for one person, so the service can tell them apart.
@@ -107,4 +107,4 @@ Vaier checks each published service's own sign-in and the service pane says what
 
 ## Open services
 
-A **Public** service whose own sign-in reads as **none** is an **open service**: anyone who finds the name can use it. Vaier mails admins about each one **once**. In the service's pane, **Put Vaier's sign-in in front** switches it to Social; **This is meant to be public** silences it.
+A service open to *Anyone* whose own sign-in reads as **none** is an **open service**: anyone who finds the name can use it. Vaier mails admins about each one **once**. In the service's pane, **Put Vaier's sign-in in front** puts it behind sign-in; **This is meant to be public** silences it.

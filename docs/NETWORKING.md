@@ -71,9 +71,9 @@ This is the only way a phone or a Windows PC joins.
 
 1. On the device, open the **Launchpad** and use the **Install card** — no store, no account. The app already knows your Vaier's address.
 2. In the app, ask to join. It shows a four-digit **join code**.
-3. Approve it under **Waiting to join** on the fleet page, or from the mail admins receive.
+3. Approve it from **Needs you** on the fleet page, or from the mail admins receive.
 
-At most five devices wait at once, and at most two from one internet address. A request waits ten minutes. Once approved, a device that was asleep or out of reach has a day to come back for its config. One that never does stays on the fleet page with no handshake; remove it there. The mail goes out at most once every ten minutes, so check **Waiting to join** for the rest.
+At most five devices wait at once, and at most two from one internet address. A request waits ten minutes. Once approved, a device that was asleep or out of reach has a day to come back for its config. One that never does stays on the fleet page with no handshake; remove it there. The mail goes out at most once every ten minutes, so check **Needs you** for the rest.
 
 The private key never leaves the device, so there is nothing to save.
 
@@ -98,7 +98,7 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 
 If the scan finds nothing, use **Add by address instead**. An address another machine already has is refused — remove or fix that one first.
 
-Then run the host's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
+Then run the machine's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
 
 A peer that is the only way to reach some LAN servers can't be removed, or have its network changed to one that leaves them out, until those LAN servers are removed.
 
@@ -111,20 +111,20 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 ## Publishing a service
 
 1. Start a Docker container on any connected peer.
-2. In the **Explorer**, open the peer's pane; the container shows as a **+ Publish** row.
-3. Click it, enter a subdomain, and optionally require Social login.
+2. In the **Explorer**, open the peer's services; the container shows under **Ready to publish**.
+3. Press **Publish**, enter a subdomain, and optionally require a login.
 4. Vaier writes the route and waits for Traefik to accept it. There is no DNS step.
 
 The service is live at `https://subdomain.yourdomain.com`. If Traefik refuses the route, or never loads it, Vaier removes it again.
 
-A name too close to an existing one is refused: `printer-colina27` beside `printer.colina27`, or `/a-b` beside `/a/b` on one subdomain. Pick another.
+A name too close to an existing one is refused: `printer-cabin` beside `printer.cabin`, or `/a-b` beside `/a/b` on one subdomain. Pick another.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
-- **Ignore** hides a **+ Publish** row.
+- **Ignore** hides a row from **Ready to publish**.
 - A LAN server behind a relay has a **Publish LAN port** form.
 - On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
 
-For auth modes and who can reach a service, see [`docs/AUTH.md`](AUTH.md).
+For who can open a service, see [`docs/AUTH.md`](AUTH.md).
 
 ### Multiple services on one subdomain
 
@@ -147,13 +147,13 @@ Choose **raw TCP** instead of **website** to publish a **stream**: clients conne
 
 A public page that links to your published services, switching to LAN URLs when you're on the same network. Strangers see only public services. Signed-in users also see the social-login services they may reach; admins see all.
 
-You can hide internal-only services. A red dot means the host is confirmed unreachable.
+You can hide internal-only services. A red dot means the machine is confirmed unreachable.
 
 ---
 
 ## Reverse proxy
 
-Each service has an **auth mode** (public or **Social login**). When a backend is down, visitors see Vaier's **offline page**.
+Each service's **Who can open it** is *Anyone — no sign-in* or *Only people who sign in to Vaier*. When a backend is down, visitors see Vaier's **offline page**.
 
 ## Edge hardening
 
@@ -187,6 +187,6 @@ DNS is one record you make once, at your DNS host:
 
 That covers the console, sign-in and every service you publish. Vaier needs no DNS credentials. At boot Vaier checks the record; anything but **covered** shows as a **pre-flight** finding under **Needs you** on the Fleet.
 
-> **One caveat worth knowing.** Vaier publishes machine-qualified names two labels deep — `openhab.colina27.yourdomain.com`. If your zone gains a real record *under a machine label* (say an `A` record for `colina27.yourdomain.com`), `*.yourdomain.com` stops covering everything beneath `colina27` and that machine's services go dark. Keep the zone free of records under a machine label, or add a `*.colina27.yourdomain.com` wildcard alongside it.
+> **One caveat worth knowing.** Vaier publishes machine-qualified names two labels deep — `openhab.cabin.yourdomain.com`. If your zone gains a real record *under a machine label* (say an `A` record for `cabin.yourdomain.com`), `*.yourdomain.com` stops covering everything beneath `cabin` and that machine's services go dark. Keep the zone free of records under a machine label, or add a `*.cabin.yourdomain.com` wildcard alongside it.
 
 Certificates are still issued one per hostname; the record is not a wildcard certificate.

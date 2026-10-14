@@ -56,15 +56,15 @@ Each machine has one job: repository, source paths, excludes, retention (`keepDa
 
 borg runs as the SSH user, so **files that user cannot read are skipped**. Container volumes are the usual victims.
 
-**You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up everything**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
+**You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up as root**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
 
-To turn it back **off**, untick *Back up files owned by other users* under **Advanced** on the `backup` entry.
+To turn it back **off**, open the **Back up as root** fold on the `backup` entry and untick it.
 
 **A passwordless `sudo borg` is root-equivalent.** Turning it on makes Vaier's SSH credential for that machine as powerful as root. Grant it only where that is acceptable.
 
 ### Running
 
-Press **Run now** on the machine's `backup` entry, or let the **nightly schedule** run every enabled job. Set its hour (default 2) in **Settings**. A night whose hour was missed — Vaier was down, or the clocks went forward — runs later that day. A machine runs one backup at a time.
+Press **Back up now** on the machine's `backup` entry, or let the **nightly schedule** run every enabled job. Set its hour (default 2) in **Settings**. A night whose hour was missed — Vaier was down, or the clocks went forward — runs later that day. A machine runs one backup at a time.
 
 Each **backup run** ends as success, warnings, **incomplete**, failed, or unknown.
 
@@ -81,7 +81,7 @@ A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **sk
 
 ### Archives
 
-Open a **backup repository** entry to list its archives. **Restore from the UI is not yet available** — use the borg CLI, or copy files out of an archive with the Explorer's time rail (see [`docs/EXPLORER.md`](EXPLORER.md)).
+Open a **backup repository** entry to list its archives. To restore, open an archive with the Explorer's time rail and copy files out of it (see [`docs/EXPLORER.md`](EXPLORER.md)).
 
 ---
 
