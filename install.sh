@@ -145,6 +145,8 @@ gen_hex() { openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An
 gen_b64url() { { openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64; } | tr -d '\n' | tr '+/' '-_'; }
 ensure_secret() {   # $1=var name  $2=generator function
   grep -qE "^$1=.+" .env 2>/dev/null && return 0
+  # A .env saved without a final newline would take the new key onto its last line.
+  if [ -s .env ] && [ -n "$(tail -c1 .env)" ]; then echo >> .env; fi
   printf '%s=%s\n' "$1" "$("$2")" >> .env
   say "Generated $1"
 }

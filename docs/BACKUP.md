@@ -56,7 +56,7 @@ Each machine has one job: repository, source paths, excludes, retention (`keepDa
 
 borg runs as the SSH user, so **files that user cannot read are skipped**. Container volumes are the usual victims.
 
-**You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up everything**. One click installs the grant and turns the setting on. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
+**You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up everything**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
 
 To turn it back **off**, untick *Back up files owned by other users* under **Advanced** on the `backup` entry.
 
