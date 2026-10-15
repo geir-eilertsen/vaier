@@ -143,7 +143,8 @@ The **Topology** draws the fleet as a painted coast under the real sky. Hover an
 - A **wake** to the lighthouse is a tunnel.
 - A **boat** is any other peer. Disconnected, it lies moored.
 - A **pirate ship** is a blocked address. Click it to open [Security](#security).
-- **Dark windows** mean down or away.
+- Each **window** is a website the machine publishes, lit while it answers and dark while it doesn't. A house that is down or away is dark throughout.
+- A white **flag with a red cross** over a house means that machine is in **Needs you**; hover it to see why.
 
 **Full screen** is the icon in the top-right corner.
 
