@@ -46,7 +46,7 @@ You never create one by hand: **Back up** makes one per machine. Each is an entr
 - A new repository's passphrase is shown once with a copy button. Save it — it is never shown again.
 - A repository's passphrase can't be changed afterwards; **Edit** covers its path and append-only setting.
 
-**Prepare client** installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need.
+When a run fails because borg is missing, the machine's `backup` entry and **Needs you** offer **Get this machine ready**. It installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need. Where Vaier can't gain root, it hands you a `sudo bash <path>` command to run in the machine's shell.
 
 ---
 

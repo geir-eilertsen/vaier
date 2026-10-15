@@ -60,10 +60,10 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 
 ### Show-once peer config
 
-A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the pane offers under **Keys and removal**:
+A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the machine's **Sign-in, details and removal** fold offers:
 
 - **Send its setup again** (Reissue) — keeps the keypair. Use it for a lost config or an ⚠ **out-of-date config** badge.
-- **Give it new keys** (Regenerate) — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
+- **Give it new keys** (Regenerate), under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app
 
@@ -121,7 +121,7 @@ A name too close to an existing one is refused: `printer-cabin` beside `printer.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a row from **Ready to publish**.
-- A LAN server behind a relay has a **Publish LAN port** form.
+- **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page.
 - On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
 
 For who can open a service, see [`docs/AUTH.md`](AUTH.md).
