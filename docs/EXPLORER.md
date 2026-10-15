@@ -96,7 +96,7 @@ Vaier cannot start, stop or read logs — use the shell. Its one action is **Upd
 
 ### The backup server's own entry
 
-Pick the fleet's backup server with **Make this the fleet's backup server** on a machine's page. It then shows **Backups kept here**, one per machine; Vaier creates them, you never do. **Forget these backups** forgets them in Vaier without erasing any archive, once no machine backs up there any more. The manual tools (**Provision**, **Authorize a host**, …) sit under a warning fold: they are for recovery. See [BACKUP](BACKUP.md).
+Pick the fleet's backup server with **Make this the fleet's backup server** on a machine's page. It then shows **Backups kept here**, one per machine; Vaier creates them, you never do. **Forget these backups** forgets them in Vaier without erasing any archive, once no machine backs up there any more. The manual tools (**Provision**, **Authorize a machine**, …) sit under a warning fold: they are for recovery. See [BACKUP](BACKUP.md).
 
 ### Selection, transfers and viewing files
 

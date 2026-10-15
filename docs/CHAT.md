@@ -82,4 +82,4 @@ Chat's **Spend** tab shows this month's cost by Vaier's own count, at list price
 
 ## The conversation
 
-The conversation is kept per operator, so it's still there next time you sign in. **New conversation**, at the top of the **Conversation** tab, forgets it for good after asking once; memories and errands stay. Past 40 turns, older ones are shortened into "Earlier, in brief: …".
+The conversation is kept per operator, so it's still there next time you sign in. **New conversation**, at the top of the **Conversation** tab, forgets it for good once you type *forget* to confirm; memories and errands stay. Past 40 turns, older ones are shortened into "Earlier, in brief: …".

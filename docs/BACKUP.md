@@ -27,12 +27,12 @@ The archives are [borg](https://www.borgbackup.org/) repositories on the fleet's
 
 The fleet has **at most one**. On a machine's Inspector in the **Explorer**, use **Make this the fleet's backup server** (offered only while none is designated). Vaier looks first and says what it will do in one sentence: use the borg server it found there, or set up a **pinned** borg-server container on the local disk with the most room. Press **Use it** or **Set it up**. **Change details** opens the coordinates form, and it opens on its own when Vaier cannot see the machine's containers or disks.
 
-The server's `backup` entry has **Server details** and, under the fold *Provision, authorize or remove this backup server*: **Provision**, **Authorize a host**, **Setup script**, **Edit coordinates**, **Remove designation**.
+The server's `backup` entry has **Server details** and, under the fold *Provision, authorize or remove this backup server*: **Provision**, **Authorize a machine**, **Setup script**, **Edit coordinates**, **Remove designation**.
 
 - Where Vaier can't drive docker over SSH (a Synology NAS, say), it stages **setup.sh** on the host and hands you one command: `sudo bash <path>`. If it can't reach the host, download setup.sh from the UI.
 - If the backup server goes quiet, Vaier emails every admin, and again when it recovers.
 
-**Authorize a host** trusts a machine's SSH key on the server. The key is confined to that machine's own repositories, so one compromised machine can't touch another's archives. It also pins the server's host key on the machine.
+**Authorize a machine** trusts a machine's SSH key on the server. The key is confined to that machine's own repositories, so one compromised machine can't touch another's archives. It also pins the server's host key on the machine.
 
 **Adding a repository for a machine means re-authorizing that host**; until then, backups to it are refused.
 
