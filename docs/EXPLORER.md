@@ -87,7 +87,7 @@ Folders are read over SFTP as you open them, using the machine's stored credenti
 
 Vaier cannot start, stop or read logs — use the shell. Its one action is **Update** on an out-of-date container started by compose: it pulls the new image, recreates the container and removes the old image. A container on a **moving tag** (a daily `latest`) is marked `moving` and never mailed about.
 
-**Websites** lists published services. A route in trouble reads **Not answering**. Unpublished containers appear under **Ready to publish**, and **Publish a service by hand** covers anything else. Opening a service gives **Open** and four blocks: **Who can open it**, **Sign people in for it**, **On the Launchpad**, and folded **Details**. **Unpublish this service** comes last and leaves the container running. See [NETWORKING](NETWORKING.md).
+**Websites** lists published services. A route reads **Not answering** when its machine is out of reach or its own port turns Vaier away — say, the container behind it was removed. Unpublished containers appear under **Ready to publish**, and **Publish a service by hand** covers anything else. Opening a service gives **Open** and four blocks: **Who can open it**, **Sign people in for it**, **On the Launchpad**, and folded **Details**. **Unpublish this service** comes last and leaves the container running. See [NETWORKING](NETWORKING.md).
 
 ### Disk
 
@@ -168,6 +168,7 @@ If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the
 The **Shell** door opens a real SSH shell to the machine, the **Vaier server** included, in its own browser window.
 
 - It returns to the shell you last used on that machine, from any device. **Duplicate** opens a fresh one.
+- The window opens where you last moved, resized or closed one. To reopen it on another screen, Chrome asks once to let Vaier manage windows on all your displays. If that screen is gone, it opens on the one you have.
 - Shells run in tmux, so closing the window or a redeploy only disconnects. Only **Exit shell** ends one.
 - **Shells** lists other Vaier shells on the machine to **Reattach** or **End**.
 - **Copy** copies a selection, or shows the screen as selectable text.
