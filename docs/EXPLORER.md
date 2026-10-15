@@ -189,7 +189,7 @@ Store the one SSH login Vaier uses for each machine, a password or a private key
 
 ### OS updates
 
-Every five minutes Vaier counts the updates an install would put on apt machines; ones Ubuntu is still holding back for a staged rollout wait until it offers them. A machine with updates says so — "2 security updates waiting · 5 in all" — with **Install OS updates**. Security updates also show in **Needs you**.
+Every five minutes Vaier counts the updates an install would put on apt machines; ones Ubuntu is still holding back for a staged rollout wait until it offers them. A machine with updates says so — "2 security updates waiting · 5 in all" — with **Install OS updates**, and **See the updates** beneath it lists each package and the version it would move to, security first. Security updates also show in **Needs you**. When a machine's package lists are a day old and Vaier has root there (as for **Install OS updates**), it refreshes them itself, at most once a day; otherwise a machine that stops refreshing them says "Has not checked for updates in 3 days".
 
 **Install OS updates** upgrades as root after a confirm (apt or dnf). It removes nothing and **never reboots**; the result says when a reboot is due. Root comes from a root login or `sudo`. A machine without root, or without apt or dnf (a Synology), is refused with the reason. A failure is mailed to the admins. Marvin can propose this too; see [Chat](CHAT.md#acting-with-your-click).
 
