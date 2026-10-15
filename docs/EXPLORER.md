@@ -28,6 +28,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 - a backup that went wrong (**Open its backup**, **Get this machine ready**, or **Back up as root**);
 - a disk past or near its threshold (**Open its disk**);
 - security updates waiting (**Install OS updates**);
+- a published website nothing answers behind, its machine up (**Unpublish**);
 - [reverse proxy config](MONITORING.md#reverse-proxy-audit) entries no route can reach (**See which**);
 - up to three suggestions of what to do next;
 - a newer Vaier (**Update Vaier**), and newer container images (**See them**).
