@@ -18,7 +18,7 @@ Traefik → oauth2-proxy → Dex ─┬→ Google
                               └→ local (the first-run password, while no provider exists)
 ```
 
-The console keeps a sign-in of its own, separate from the one your published apps share, so no app ever receives a session that could open Vaier. You sign in once; the second is a redirect you don't see. **Sign out** ends both.
+The console keeps a sign-in of its own, separate from the one your published apps share, so no app ever receives a session that could open Vaier. You sign in once: whichever you sign in to first, opening the console or the Launchpad brings the other along in a redirect you don't see. **Sign out** ends both. An app that keeps working offline, such as openHAB, may ask for its own password once the apps' sign-in is gone; open Vaier once, or reload the app with Ctrl+Shift+R.
 
 ### The first-run password, before you have registered anything
 
