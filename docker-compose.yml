@@ -252,18 +252,13 @@ services:
                 customFrameOptionsValue: SAMEORIGIN
             # #442: LAST on every route Vaier writes to a published app, after the sign-in has read the
             # cookie. oauth2-proxy's cookie is scoped to the whole domain, so without this every app
-            # would receive the operator's session — and could replay it against the console. Its
-            # value is blanked (the plugin cannot drop a cookie outright); the split _0/_1 halves and
-            # the CSRF cookie go too. Never on oauth2-proxy's own routes, which need it.
+            # would receive the operator's session — and could replay it against the console. Every
+            # cookie named with this prefix is dropped: the split _0/_1 halves and the CSRF cookie too.
+            # Never on oauth2-proxy's own routes, which need it.
             vaier-session-guard:
               plugin:
-                htransformation:
-                  Rules:
-                    - Name: blank-vaier-session
-                      Header: '^Cookie$$'
-                      Value: '^(_oauth2_proxy[^=]*)=.*$$'
-                      ValueReplace: '$$1='
-                      Type: RewriteValueRule
+                sessionguard:
+                  prefix: _oauth2_proxy
         tls:
           options:
             # `default` is Traefik's implicit option set: every router that does not name one inherits
@@ -286,6 +281,60 @@ services:
                 - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
         VAIER_EDGE_POLICY
         mv /traefik/config/.security.yml.tmp /traefik/config/security.yml
+        # The session guard's plugin (vaier-session-guard above), local so it can touch the request only.
+        # htransformation wrapped every response without Flush, which held back event streams (openHAB).
+        sg=/plugins-local/src/github.com/vaier/sessionguard
+        mkdir -p "$$sg"
+        cat > "$$sg/.traefik.yml" <<'VAIER_SESSION_GUARD'
+        displayName: Vaier session guard
+        type: middleware
+        import: github.com/vaier/sessionguard
+        summary: Drops cookies with a given name prefix from the request.
+        testData:
+          prefix: _oauth2_proxy
+        VAIER_SESSION_GUARD
+        printf 'module github.com/vaier/sessionguard\n\ngo 1.22\n' > "$$sg/go.mod"
+        cat > "$$sg/sessionguard.go" <<'VAIER_SESSION_GUARD'
+        package sessionguard
+
+        import (
+        	"context"
+        	"net/http"
+        	"strings"
+        )
+
+        type Config struct {
+        	Prefix string `json:"prefix,omitempty"`
+        }
+
+        func CreateConfig() *Config { return &Config{} }
+
+        type guard struct {
+        	next   http.Handler
+        	prefix string
+        }
+
+        func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+        	return &guard{next: next, prefix: config.Prefix}, nil
+        }
+
+        func (g *guard) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+        	var kept []string
+        	for _, line := range req.Header.Values("Cookie") {
+        		for _, part := range strings.Split(line, ";") {
+        			cookie := strings.TrimSpace(part)
+        			if cookie != "" && (g.prefix == "" || !strings.HasPrefix(cookie, g.prefix)) {
+        				kept = append(kept, cookie)
+        			}
+        		}
+        	}
+        	req.Header.Del("Cookie")
+        	if len(kept) > 0 {
+        		req.Header.Set("Cookie", strings.Join(kept, "; "))
+        	}
+        	g.next.ServeHTTP(rw, req)
+        }
+        VAIER_SESSION_GUARD
         # Routes to the VPN subnet and each relay's lanCidr, re-checked every 15s so a relay added later
         # is reachable without a restart. Runs here, not in a sidecar: a sidecar sharing this netns dies
         # whenever traefik is recreated and then leaves every new relay silently unrouted. $$$$ is this
@@ -378,9 +427,8 @@ services:
       # other upstream. Fetched from the plugin registry once and kept in plugins-storage.
       - --experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
       - --experimental.plugins.bouncer.version=v1.7.1
-      # The session guard (vaier-session-guard above). Pinned the same way.
-      - --experimental.plugins.htransformation.modulename=github.com/tomMoulard/htransformation
-      - --experimental.plugins.htransformation.version=v0.4.1
+      # The session guard (vaier-session-guard above), written by the entrypoint into /plugins-local.
+      - --experimental.localplugins.sessionguard.modulename=github.com/vaier/sessionguard
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}
