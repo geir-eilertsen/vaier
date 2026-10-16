@@ -97,3 +97,27 @@ The **survival kit** fixes that: every repository's address and passphrase, the 
 - Each copy is `vaier-survival-kit.txt` (`0600`) in the SSH user's home.
 - **Opening it needs no Vaier**: the `openssl enc -aes-256-cbc -pbkdf2 -d` command is printed at the top of every copy, with its date.
 - **Vaier keeps them current itself**: a new repository, passphrase, job or machine name rewrites every copy, as does changing the kit passphrase.
+
+---
+
+## Rebuilding Vaier after losing its server
+
+This works only if Vaier backed up its own folder (tick it in the Explorer like any other) and you wrote the survival kit. Rehearse it once on a spare box before you need it.
+
+1. **Open the kit** on any copy with the `openssl` command at its top. It names the backup server and the Vaier server's repository, with its passphrase.
+2. **Reach the backup server.** Its address is usually on a home LAN, so work from a machine there; the tunnels went with the server. The key Vaier trusted for the old server opens only that server's repository and is gone with it, so make a key where you work (`ssh-keygen -t ed25519`) and append its public half to `authorized_keys` in the borg server's `ssh` folder, next to `backups`. Take it out again afterwards.
+3. **Extract the folder** as root, so owners and modes survive:
+   ```bash
+   export BORG_PASSPHRASE='the passphrase from the kit' BORG_RSH="ssh -i $HOME/.ssh/id_ed25519"
+   sudo -E borg list 'the repository from the kit'
+   sudo -E borg extract 'the repository from the kit'::ARCHIVE home/<user>/vaier
+   sudo tar -czpf vaier.tgz home/<user>/vaier
+   ```
+4. **Start it on the new server.** Install Docker (`curl -fsSL https://get.docker.com | sh`), copy `vaier.tgz` over, then:
+   ```bash
+   sudo tar -xzpf vaier.tgz -C / && cd ~/vaier && docker compose pull && docker compose up -d
+   ```
+   Keep the same user and path, or move the folder and keep its owners: Vaier's files must stay owned by uid 1000.
+5. **Give it the old public address** if you can. On a new one, change your `*.<domain>` record, then restart the tunnel on every device and peer: a WireGuard client keeps the address it first looked up. A house you can't reach needs its peer power-cycled.
+
+The restored folder carries Vaier's own key. If `vaier/config/vault.key` is missing, put the kit's **config key** there (`0600`, owned by uid 1000), or set it as `VAIER_VAULT_KEY` in `.env`; without it every stored password and passphrase stays unreadable.
