@@ -851,9 +851,7 @@ services:
       # session yet. Each is anchored to a single id/name path segment + /setup only (NOT /setup.sh —
       # the in-console download stays admin-gated) — nothing else is exposed. Each route is self-guarded
       # by a single-use, ~15-min setup token validated inside Vaier (over HTTPS via websecure).
-      # #359: /app/android/vaier.apk is the Vaier app itself — the same signed package for every visitor,
-      # carrying no secret — and a phone must fetch it before it can sign in and enrol, so it is public.
-      - traefik.http.routers.vaier-public.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/`) || Path(`/index.html`) || Path(`/launchpad.html`) || Path(`/styles.css`) || Path(`/avatar.js`) || PathPrefix(`/icon`) || Path(`/favicon`) || Path(`/launchpad/services`) || Path(`/launchpad/events`) || Path(`/app/android/vaier.apk`) || Path(`/app/windows/VaierSetup.exe`) || PathRegexp(`^/vpn/peers/[^/]+/setup$`) || PathRegexp(`^/lan-servers/[^/]+/setup$`))
+      - traefik.http.routers.vaier-public.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/`) || Path(`/index.html`) || Path(`/launchpad.html`) || Path(`/styles.css`) || Path(`/avatar.js`) || PathPrefix(`/icon`) || Path(`/favicon`) || Path(`/launchpad/services`) || Path(`/launchpad/events`) || PathRegexp(`^/vpn/peers/[^/]+/setup$`) || PathRegexp(`^/lan-servers/[^/]+/setup$`))
       - traefik.http.routers.vaier-public.entrypoints=websecure
       - traefik.http.routers.vaier-public.tls.certresolver=letsencrypt
       - traefik.http.routers.vaier-public.priority=200
@@ -895,8 +893,9 @@ services:
       # injects the identity headers (X-Auth-Request-*) when a session exists, and returns 401 for an
       # anonymous caller (the page treats that as anonymous and falls back to /launchpad/services).
       # NO oauth2-signin (so no forced-login redirect) and NO vaier-authz (so no admin gate): a
-      # signed-in non-admin can read its own identity and its own reachable tiles.
-      - traefik.http.routers.vaier-identity.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/launchpad/services-authenticated`) || Path(`/users/me`))
+      # signed-in non-admin can read its own identity and its own reachable tiles, and download the
+      # Vaier app from the avatar's menu.
+      - traefik.http.routers.vaier-identity.rule=Host(`vaier.${VAIER_DOMAIN}`) && (Path(`/launchpad/services-authenticated`) || Path(`/users/me`) || Path(`/app/android/vaier.apk`) || Path(`/app/windows/VaierSetup.exe`))
       - traefik.http.routers.vaier-identity.entrypoints=websecure
       - traefik.http.routers.vaier-identity.tls.certresolver=letsencrypt
       - traefik.http.routers.vaier-identity.middlewares=vaier-console-authn@docker,vaier-down,vaier-frame-guard@file

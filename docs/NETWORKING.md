@@ -69,7 +69,7 @@ A server peer's config is shown **exactly once**, at creation. Save what you nee
 
 This is the only way a phone or a Windows PC joins.
 
-1. On the device, open the **Launchpad** and use the **Install card** — no store, no account. The app already knows your Vaier's address.
+1. On the device, open your Vaier and sign in, then choose **Get the Vaier app** in the menu behind your picture at the top right. It is offered only on Android and Windows. There's no store; the app already knows your Vaier's address.
 2. In the app, ask to join. It shows a four-digit **join code**.
 3. Approve it from **Needs you** on the fleet page, or from the mail admins receive.
 
