@@ -91,11 +91,12 @@ Open a **backup repository** entry to list its archives. To restore, open an arc
 
 Your repository passphrases live inside Vaier, and Vaier's own backup is encrypted with one of them. Lose the Vaier server and nothing left can open your archives.
 
-The **survival kit** fixes that: every repository's address and passphrase, the borg commands to read them, and Vaier's **config key**, encrypted under **one passphrase you choose** (at least 16 characters, since copies sit on your machines). Set it in **Settings → Survival kit** and press **Write the kit now**.
+The **survival kit** fixes that: every repository's address and passphrase, the borg commands to read them, a **recovery key** that opens the backup server, and Vaier's **config key**, encrypted under **one passphrase you choose** (at least 16 characters, since copies sit on your machines). Set it in **Settings → Survival kit** and press **Write the kit now**.
 
 - **Vaier picks the hosts and says why**: reachable servers, never itself, spread across sites. It tells you whether anything written now outlives this server.
 - Each copy is `vaier-survival-kit.txt` (`0600`) in the SSH user's home.
 - **Opening it needs no Vaier**: the `openssl enc -aes-256-cbc -pbkdf2 -d` command is printed at the top of every copy, with its date.
+- **The recovery key** is Vaier's own key on the backup server. It can read every repository, and add archives, but never delete one. If Vaier could not place it there, the kit says so and gives the line to add by hand.
 - **Vaier keeps them current itself**: a new repository, passphrase, job or machine name rewrites every copy, as does changing the kit passphrase.
 
 ---
@@ -105,10 +106,10 @@ The **survival kit** fixes that: every repository's address and passphrase, the 
 This works only if Vaier backed up its own folder (tick it in the Explorer like any other) and you wrote the survival kit. Rehearse it once on a spare box before you need it.
 
 1. **Open the kit** on any copy with the `openssl` command at its top. It names the backup server and the Vaier server's repository, with its passphrase.
-2. **Reach the backup server.** Its address is usually on a home LAN, so work from a machine there; the tunnels went with the server. The key Vaier trusted for the old server opens only that server's repository and is gone with it, so make a key where you work (`ssh-keygen -t ed25519`) and append its public half to `authorized_keys` in the borg server's `ssh` folder, next to `backups`. Take it out again afterwards.
+2. **Reach the backup server.** Its address is usually on a home LAN, so work from a machine there; the tunnels went with the server. Save the kit's **recovery key** as `vaier-recovery-key` and `chmod 600` it.
 3. **Extract the folder** as root, so owners and modes survive:
    ```bash
-   export BORG_PASSPHRASE='the passphrase from the kit' BORG_RSH="ssh -i $HOME/.ssh/id_ed25519"
+   export BORG_PASSPHRASE='the passphrase from the kit' BORG_RSH="ssh -i $PWD/vaier-recovery-key"
    sudo -E borg list 'the repository from the kit'
    sudo -E borg extract 'the repository from the kit'::ARCHIVE home/<user>/vaier
    sudo tar -czpf vaier.tgz home/<user>/vaier
