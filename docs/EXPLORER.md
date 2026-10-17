@@ -103,8 +103,8 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 **Tick files to build a Selection**; it survives moving between folders and machines. The bar above the listing carries every verb that applies.
 
 - **View** images, PDFs, text and video in a new tab. HTML and SVG are download-only.
-- **Download** a file, or a zip of a folder or several items. Anything Vaier cannot read, and anything that is not an ordinary file (a pipe, socket or broken link), is listed in *Not included.txt* inside the zip.
-- **Transfer** a file or folder to another machine, with live progress. What Vaier cannot read is left out, as in a zip. Something of the same name already there is never replaced without asking; a restore from the past puts the past back without asking.
+- **Download** a file, or a zip of a folder or several items. Anything Vaier cannot read, and anything that is not an ordinary file (a pipe, socket or broken link), is listed in *Not included.txt* inside the zip. A pipe or device on its own is refused rather than downloaded or viewed.
+- **Transfer** a file or folder to another machine, with live progress. What Vaier cannot read is left out, as in a zip, and the finished transfer says how many items it left out and names them. Something of the same name already there is never replaced without asking; a restore from the past puts the past back without asking.
 - **Upload** by dropping files on the folder or with **Upload files**. Files only. An existing name is never replaced without asking.
 - **Delete**, confirmed by typing the file's name (or, for several, how many). It cannot be undone.
 
@@ -188,7 +188,7 @@ Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. In vim, htop or Claude Code, hold **Shi
 
 Store the one SSH login Vaier uses for each machine, a password or a private key, from the machine's page. Secrets are encrypted and never shown back.
 
-**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. Turning it off first ends Vaier's shells on that machine, so any shell window open on it closes. Machines where Vaier signs in as `root` are tagged. No key? Vaier generates one and shows the line for `authorized_keys`.
+**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. A printer, camera, smart device or phone has no shell, so Vaier doesn't offer SSH for one at all; if Vaier guessed the kind wrong, change what it is first. Turning it off first ends Vaier's shells on that machine, so any shell window open on it closes. Machines where Vaier signs in as `root` are tagged. No key? Vaier generates one and shows the line for `authorized_keys`.
 
 ### OS updates
 

@@ -34,7 +34,7 @@ In the **Explorer**, choose **Add a machine**. It asks what you are adding and g
 
 | What | Default routing | Handoff |
 |------|-----------------|---------|
-| A server | VPN subnet only | A **no-sudo setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container (Docker only, no root). The link is single-use and short-lived |
+| A server | VPN subnet only | A **setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container, and asks for your password once to install Docker and the tunnel. The link is single-use and expires after about 15 minutes |
 | An Android phone or Windows PC | All traffic | The Vaier app and a join code — Vaier makes no config |
 
 The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it.

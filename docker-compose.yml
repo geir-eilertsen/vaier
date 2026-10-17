@@ -349,7 +349,7 @@ services:
                 [ -n "$$cidr" ] && ip route replace "$$cidr" via "$$WG_IP" 2>/dev/null || true
               done < /lan-routes/lan-cidrs
               # A network no relay routes any more goes too; never the VPN subnet, never without the list.
-              [ -f /lan-routes/lan-cidrs ] && ip route show | awk -v gw="$$WG_IP" '$$2 == "via" && $$3 == gw {print $$1}' \
+              [ -f /lan-routes/lan-cidrs ] && ip route show | awk -v gw="$$WG_IP" '$$2 == "via" && $$3 == gw {print ($$1 ~ /\// ? $$1 : $$1 "/32")}' \
                 | while read -r dst; do
                     [ "$$dst" = 10.13.13.0/24 ] || grep -qxF "$$dst" /lan-routes/lan-cidrs \
                       || ip route del "$$dst" via "$$WG_IP" 2>/dev/null || true
@@ -629,7 +629,7 @@ services:
             done < /lan-routes/lan-cidrs
             # A network no relay routes any more goes too, so it cannot blackhole a real one. Only with the
             # list present: a missing file says nothing, and must never empty the table.
-            [ -f /lan-routes/lan-cidrs ] && ip route show | awk -v gw="$$WG_IP" '$$2 == "via" && $$3 == gw {print $$1}' \
+            [ -f /lan-routes/lan-cidrs ] && ip route show | awk -v gw="$$WG_IP" '$$2 == "via" && $$3 == gw {print ($$1 ~ /\// ? $$1 : $$1 "/32")}' \
               | while read -r dst; do
                   grep -qxF "$$dst" /lan-routes/lan-cidrs || ip route del "$$dst" via "$$WG_IP" 2>/dev/null || true
                 done

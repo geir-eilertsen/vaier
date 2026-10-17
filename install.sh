@@ -234,7 +234,7 @@ if $interactive; then
         logs=$("${docker_cmd[@]}" compose logs --no-log-prefix vaier 2>/dev/null || true)
         first_sign_in=$(printf '%s\n' "$logs" | grep -E '^  (Open|Sign in|Email|Password) ' | tail -4 || true)
         [ -n "$first_sign_in" ] && break
-        printf '%s' "$logs" | grep -q 'Started VaierApplication' && started=$((started + 1))
+        grep -q 'Started VaierApplication' <<<"$logs" && started=$((started + 1))
         [ "$started" -gt 5 ] && break   # up, but no first-run door: a sign-in provider is already set
         sleep 2
       done

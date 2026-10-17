@@ -82,8 +82,14 @@ fi
 # --- remove it ----------------------------------------------------------------------------------------
 # Containers first: host-lan-routes would put the routes straight back.
 [ "${#containers[@]}" -gt 0 ] && { say "Removing containers"; run "${docker[@]}" rm -f "${containers[@]}" >/dev/null; }
-[ "${#networks[@]}" -gt 0 ] && { say "Removing networks"; run "${docker[@]}" network rm "${networks[@]}" >/dev/null; }
-[ "${#volumes[@]}" -gt 0 ] && { say "Removing volumes"; run "${docker[@]}" volume rm "${volumes[@]}" >/dev/null; }
+if [ "${#networks[@]}" -gt 0 ]; then
+  say "Removing networks"
+  for n in "${networks[@]}"; do run "${docker[@]}" network rm "$n" >/dev/null || warn "kept network $n (another container is still attached)"; done
+fi
+if [ "${#volumes[@]}" -gt 0 ]; then
+  say "Removing volumes"
+  for v in "${volumes[@]}"; do run "${docker[@]}" volume rm "$v" >/dev/null || warn "kept volume $v (a container still uses it)"; done
+fi
 if [ "${#images[@]}" -gt 0 ]; then
   say "Removing images"
   for i in "${images[@]}"; do run "${docker[@]}" rmi "$i" >/dev/null || warn "kept image $i (another container uses it)"; done
