@@ -74,7 +74,7 @@ An errand can propose the same actions a card can, including writes to a service
 
 ## Memory
 
-Chat keeps a **memory** of short facts about the fleet. It never treats one as an instruction. Once an answer has read a web page, a search, a machine's output or a service, Marvin keeps, forgets and schedules nothing in that answer, and opens only pages a search found: text like that can carry somebody else's instructions. Ask him in your own words and he will. Chat's **Memory** tab lists every memory with a remove button.
+Chat keeps a **memory** of short facts: how the fleet is built (which machine does what, where things are kept) and the world around it. It never keeps state like disk levels, versions or what is down — those go stale, and Marvin reads them fresh instead. It never treats one as an instruction. Once a conversation has read a web page, a search, a machine's output or a service, Marvin forgets and schedules nothing in it, and opens only pages a search found: text like that can carry somebody else's instructions. A fact he wants to keep then comes as a **Remember this** card showing the exact sentence, and nothing is kept until you say yes. Errands never ask. Chat's **Memory** tab lists every memory with a remove button.
 
 ## Spend
 
