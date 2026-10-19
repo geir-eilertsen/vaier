@@ -10,22 +10,27 @@ Configuration and workflows beyond the basic Quick Start. If you're just getting
 
 ## The installer
 
-`install.sh` installs Vaier and updates it by hand. It always fetches the runtime files for one ref of the repository (pin it with `VAIER_REF`: a branch, tag or commit), creates `.env` at mode `600` if there is none, and adds any auto-generated secret `.env` lacks. It never changes a value you set.
+`install.sh` installs Vaier and updates it by hand. It runs only on x86-64 (amd64) machines. It always fetches the runtime files for one ref of the repository (pin it with `VAIER_REF`: a branch, tag or commit — a commit or a `v` tag also pins Vaier's image to that build, a branch follows `latest`), creates `.env` at mode `600` if there is none, and adds any auto-generated secret `.env` lacks. It never changes a value you set.
 
 **At a terminal, it finishes the job** — including `curl … | bash`:
 
 - **Asks three questions on a fresh install**: your **domain**, your **email** (Let's Encrypt's contact and the first-run sign-in account — see [AUTH](AUTH.md#the-first-run-password-before-you-have-registered-anything)), and your **time zone** for schedules. They go into `.env` as `VAIER_DOMAIN`, `ACME_EMAIL` and `VAIER_TZ`.
-- **Checks DNS.** If `vaier.<domain>` doesn't point here yet, it prints the exact wildcard record to make. Starting now is fine — Vaier waits for the record before asking for certificates ([Wildcard DNS](NETWORKING.md#wildcard-dns)).
+- **Checks DNS.** If `vaier.<domain>` doesn't resolve yet, it prints the exact wildcard record to make. Starting now is fine — Vaier waits up to five minutes for the record before asking for certificates ([Wildcard DNS](NETWORKING.md#wildcard-dns)). If it points at another server, fix the record before starting: Let's Encrypt would ask that server, and refuses for an hour after a few failures.
 - **Offers to install Docker** when it is missing.
+- **Checks what would stop the start**: a Docker Compose older than v2.23, or TCP 80, TCP 443 or UDP 51820 already taken (it names the program holding the port). It says so instead of offering to start.
 - **Offers to start Vaier** and prints the first-run sign-in: URL, email and password.
 
 Sign-in providers and mail are set later in the console — Google or GitHub under **People → Sign-in providers** ([AUTH](AUTH.md#registering-google-or-github)), mail under **Settings**.
 
-**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?**
+**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Updating by hand instead, run `docker compose up -d --force-recreate --no-deps wireguard-masquerade` after `docker compose up -d`: that sidecar dies whenever WireGuard is recreated, and without it Vaier cannot reach your LANs.
+
+The commands it prints carry `sudo` when your user is not in the `docker` group.
 
 **Without a terminal** (or with `VAIER_NONINTERACTIVE=1`) it only does the groundwork and prints the next steps. **Settings → Update Vaier** runs it this way ([Monitoring](MONITORING.md#updating-vaier-itself)).
 
-**Docker Compose v2.23 or newer** is required. The installer's own Docker install is always new enough.
+**Docker Compose v2.23 or newer** is required. The installer's own Docker install is always new enough; Ubuntu's and Debian's `docker.io` package often is not.
+
+**`required variable VAIER_DOMAIN is missing a value`** means `.env` has no domain or email yet: fill in `VAIER_DOMAIN` and `ACME_EMAIL`.
 
 **`required variable … is missing a value`** from `docker compose up -d` means your `.env` predates a secret a newer release generates. Re-run the installer to add it; a running stack keeps running meanwhile.
 
@@ -53,7 +58,7 @@ Sign-in providers and mail are set later in the console — Google or GitHub und
 | `VAIER_DEX_CLIENT_SECRET` | Auto | oauth2-proxy↔Dex shared secret |
 | `VAIER_CROWDSEC_BOUNCER_KEY` | Auto | CrowdSec bouncer API key |
 | `VAIER_PUBLIC_HOST` | No | Public hostname, when not on EC2 |
-| `VAIER_PUBLIC_IP` | No | Public IPv4, when not on EC2; what `*.<domain>` should resolve to |
+| `VAIER_PUBLIC_IP` | No | Public IPv4, what `*.<domain>` should resolve to; the installer fills it in |
 | `VAIER_SERVER_LAN_CIDR` | No | The server's own LAN, for LAN servers with no relay peer (see below) |
 | `WIREGUARD_CONFIG_PATH` | No | WireGuard config dir (default: `/wireguard/config`) |
 | `WIREGUARD_CONTAINER_NAME` | No | WireGuard container name (default: `wireguard`) |
@@ -62,7 +67,9 @@ Sign-in providers and mail are set later in the console — Google or GitHub und
 
 "Auto" secrets are generated into `.env` for you. A provider is offered only when both its client id and secret are set; its redirect URI is `https://dex.<domain>/callback`. With no provider, Vaier opens the [first-run door](AUTH.md#the-first-run-password-before-you-have-registered-anything) instead.
 
-On EC2 the public address and subnet are read from instance metadata. Elsewhere, set `VAIER_PUBLIC_HOST` or `VAIER_PUBLIC_IP` — without one, Vaier can check that `*.<domain>` resolves, but not that it resolves *here*.
+On EC2 the public address and subnet are read from instance metadata. The installer also writes `VAIER_PUBLIC_IP` when it can find the address. Without it, off EC2, Vaier can check that `*.<domain>` resolves but not that it resolves *here*, and **Needs you** asks you to set it — not to change DNS. If the server's address changes, change `VAIER_PUBLIC_IP` with it.
+
+Vaier answers only what comes through Traefik, where sign-in is checked. Another container on its network, or the host, calling `vaier:8080` directly gets `403`. To ask it something from the server itself, run the request inside its container: `docker exec vaier curl -s localhost:8080/<path>`.
 
 ---
 

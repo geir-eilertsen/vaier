@@ -37,7 +37,7 @@ In the **Explorer**, choose **Add a machine**. It asks what you are adding and g
 | A server | VPN subnet only | A **setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container, and asks for your password once to install Docker and the tunnel. The link is single-use and expires after about 15 minutes |
 | An Android phone or Windows PC | All traffic | The Vaier app and a join code — Vaier makes no config |
 
-The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it.
+The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it. A relay only passes that network on once its setup has run with it, so routing, changing or clearing a relay's LAN marks its setup out of date: **Send its setup again** and run the line on the relay to finish.
 
 Things worth knowing:
 
@@ -49,12 +49,12 @@ Things worth knowing:
 
 With two or more relay peers, a machine on one site's LAN can reach a machine on another's, through both relays and the Vaier server. The far host sees the relay as the sender and needs no configuration. A LAN host that should *start* such connections needs the [LAN setup script](#lan-servers-and-the-lan-scanner).
 
-**Adding, removing or re-addressing a relay makes every other server peer's config out of date.** On each relay, **Reissue** and run the setup link again. The keypair is kept.
+**Adding, removing or re-addressing a relay makes every other server peer's config out of date.** Each one says so in its pane: **Send its setup again** and run the line there. The keypair is kept.
 
 ### Names, descriptions and status
 
 - **Edit details** sets a machine's name and **description**. Renaming breaks nothing, and names **do not have to be unique**.
-- An amber icon means reachable but the Docker scrape failed; red means unreachable.
+- An amber name means the machine is reachable but Vaier can't see its apps right now; its Apps pane keeps the ones it saw last. Red means unreachable.
 - **Removing a machine** also forgets its SSH login and host key and stops its backups. The archives already made stay on the backup server.
 - The **Map** shows one marker per site. Phones and laptops are never placed on it.
 
@@ -62,7 +62,7 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 
 A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the machine's **Sign-in, details and removal** fold offers:
 
-- **Send its setup again** (Reissue) — keeps the keypair. Use it for a lost config or an ⚠ **out-of-date config** badge.
+- **Send its setup again** (Reissue) — keeps the keypair. Use it for a lost config, or when the pane says its setup is out of date.
 - **Give it new keys** (Regenerate), under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app
@@ -96,7 +96,7 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 2. Pick **where it is** (**At <name>**) and Vaier scans that LAN.
 3. Pick a host and type a name. If it speaks SSH, attach and **test** a credential.
 
-If the scan finds nothing, use **Add by address instead**. An address another machine already has is refused — remove or fix that one first.
+The scan leaves out machines already in the fleet, the Vaier server and the relays themselves among them. A relay counts once Vaier can sign in to it and has read its address. If the scan finds nothing, use **Add by address instead**. An address another machine already has is refused — remove or fix that one first.
 
 Then run the machine's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
 
@@ -117,7 +117,7 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 
 The service is live at `https://subdomain.yourdomain.com`. If Traefik refuses the route, or never loads it, Vaier removes it again.
 
-A name too close to an existing one is refused: `printer-cabin` beside `printer.cabin`, or `/a-b` beside `/a/b` on one subdomain. Pick another.
+A name too close to an existing one is refused: `printer-cabin` beside `printer.cabin`, or `/a-b` beside `/a/b` on one subdomain. So are `vaier`, `oauth2` and `dex`, which Vaier uses for its own console and sign-in. Pick another.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a row from **Ready to publish**.
@@ -147,7 +147,7 @@ Choose **raw TCP** instead of **website** to publish a **stream**: clients conne
 
 A public page that links to your published services, switching to LAN URLs when you're on the same network. Strangers see only public services. Signed-in users also see the social-login services they may reach; admins see all.
 
-You can hide internal-only services. A red dot means the machine is confirmed unreachable.
+You can hide internal-only services. A red dot and a line such as *nas isn't answering* mean the machine is confirmed unreachable. A signed-out visitor who can see nothing is asked to **Sign in**.
 
 ---
 
@@ -185,8 +185,8 @@ DNS is one record you make once, at your DNS host:
 *.yourdomain.com  A  <your server's public IP>
 ```
 
-That covers the console, sign-in and every service you publish. Vaier needs no DNS credentials. At boot Vaier checks the record; anything but **covered** shows as a **pre-flight** finding under **Needs you** on the Fleet.
+That covers the console, sign-in and every service you publish. Vaier needs no DNS credentials. Vaier checks the record at boot and every five minutes until it is **covered**; until then it shows as a **pre-flight** finding under **Needs you** on the Fleet, and the row clears by itself once the record is right — no restart needed.
 
 > **One caveat worth knowing.** Vaier publishes machine-qualified names two labels deep — `openhab.cabin.yourdomain.com`. If your zone gains a real record *under a machine label* (say an `A` record for `cabin.yourdomain.com`), `*.yourdomain.com` stops covering everything beneath `cabin` and that machine's services go dark. Keep the zone free of records under a machine label, or add a `*.cabin.yourdomain.com` wildcard alongside it.
 
-Certificates are still issued one per hostname; the record is not a wildcard certificate.
+Certificates are still issued one per hostname; the record is not a wildcard certificate. A published service whose certificate has not arrived — port 80 closed, or a Let's Encrypt limit hit — says **No certificate yet** on its row and its page, and in **Needs you**, because browsers warn before opening it.

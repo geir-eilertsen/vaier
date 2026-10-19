@@ -177,8 +177,10 @@ services:
     cap_add:
       - NET_ADMIN
     environment:
-      # Used only by the entrypoint's DNS-propagation wait below to build the infra hostnames it holds on.
+      # Used only by the entrypoint's DNS-propagation wait below: the infra hostnames it holds on, and the
+      # address they must resolve to when the operator has named it.
       VAIER_DOMAIN: ${VAIER_DOMAIN:-}
+      VAIER_PUBLIC_IP: ${VAIER_PUBLIC_IP:-}
       # Read by the CrowdSec bouncer plugin through the file provider's templating (security.yml below),
       # so the key never lands on disk. The same install.sh-generated secret crowdsec self-registers.
       CROWDSEC_BOUNCER_API_KEY: ${VAIER_CROWDSEC_BOUNCER_KEY:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
@@ -364,17 +366,24 @@ services:
         # request gets NXDOMAIN and the retry burst trips LE's "5 failed authorizations per host per hour"
         # limit (an hour on the self-signed default cert). So hold here until all three names resolve on a
         # PUBLIC resolver (what LE queries — not this container's split-horizon/VPC resolver) BEFORE any
-        # ACME. Fail-open after ~5 min so a genuinely broken wildcard never leaves the box without a
-        # reverse proxy forever; traefik's own ACME retry then takes over.
+        # ACME — and, with VAIER_PUBLIC_IP set, until they resolve to THIS server: an answer pointing at an
+        # old host would send every HTTP-01 challenge there. Fail-open after ~5 min so a genuinely broken
+        # wildcard never leaves the box without a reverse proxy forever; traefik's own ACME retry then
+        # takes over.
+        resolves_here() {
+          answer=$$(nslookup "$$1" "$$2" 2>/dev/null) || return 1
+          [ -z "$$VAIER_PUBLIC_IP" ] && return 0
+          printf '%s\n' "$$answer" | awk -v ip="$$VAIER_PUBLIC_IP" '$$1 == "Address:" && $$2 == ip { f = 1 } END { exit !f }'
+        }
         if [ -n "$$VAIER_DOMAIN" ]; then
           deadline=$$(( $$(date +%s) + 300 ))
           for h in vaier oauth2 dex; do
-            until nslookup "$$h.$$VAIER_DOMAIN" 1.1.1.1 >/dev/null 2>&1 || nslookup "$$h.$$VAIER_DOMAIN" 8.8.8.8 >/dev/null 2>&1; do
+            until resolves_here "$$h.$$VAIER_DOMAIN" 1.1.1.1 || resolves_here "$$h.$$VAIER_DOMAIN" 8.8.8.8; do
               if [ "$$(date +%s)" -ge "$$deadline" ]; then
                 echo "traefik: DNS wait timed out for $$h.$$VAIER_DOMAIN — proceeding to ACME anyway (fail-open)"
                 break
               fi
-              echo "traefik: waiting for $$h.$$VAIER_DOMAIN to resolve before asking Let's Encrypt..."
+              echo "traefik: waiting for $$h.$$VAIER_DOMAIN to resolve$${VAIER_PUBLIC_IP:+ to $$VAIER_PUBLIC_IP} before asking Let's Encrypt..."
               sleep 5
             done
           done
@@ -788,8 +797,8 @@ services:
       # hour against this zone, so "02:00" means 02:00 here — not 02:00 UTC. Defaults to UTC; set
       # VAIER_TZ in .env (e.g. Europe/Oslo) to schedule in your own local time.
       TZ: ${VAIER_TZ:-UTC}
-      VAIER_DOMAIN: ${VAIER_DOMAIN:-}
-      ACME_EMAIL: ${ACME_EMAIL:-}
+      VAIER_DOMAIN: ${VAIER_DOMAIN:?not set in .env — your base domain, e.g. example.com}
+      ACME_EMAIL: ${ACME_EMAIL:?not set in .env — the email Let’s Encrypt writes to}
       VAIER_PUBLIC_HOST: ${VAIER_PUBLIC_HOST:-}
       VAIER_PUBLIC_IP: ${VAIER_PUBLIC_IP:-}
       # Override the auto-detected LAN/VPC subnet (EC2 IMDS detects only the server's own /20).

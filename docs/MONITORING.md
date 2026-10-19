@@ -42,6 +42,8 @@ Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER
 
 Later, a blank password keeps the stored one — but only for the same host and username. Change either and type the password again.
 
+**Stop sending mail**, under **Settings → Mail → Change**, forgets the mail server and its password without testing them — the way out when the mailbox is closed or its password revoked. Vaier then sends nothing, and the "could not send its last mail" row in **Needs you** goes too.
+
 ---
 
 ## Host disk monitoring

@@ -18,7 +18,7 @@ Which machines are connected, who's waiting to join, published services and thei
 
 ## A read-only command on a machine
 
-For what those facts don't answer — a log, a process list, a file — Chat can run one **read-only command** on a machine over SSH, as Vaier's login user, without sudo. Only commands that look are allowed (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show` and the like). Chaining, redirects, unquoted wildcards, recursive greps and anything naming or printing a secret are refused.
+For what those facts don't answer — a log, a process list, a file — Chat can run one **read-only command** on a machine over SSH, as Vaier's login user, without sudo. Only commands that look are allowed (`ls`, `cat`, `df`, `apt list --upgradable`, `docker ps`, `journalctl`, `wg show` and the like). Chaining, redirects, unquoted wildcards, recursive greps, name lookups (`dig`, `nslookup`, `host`, `getent hosts`) and anything naming or printing a secret are refused.
 
 ## The internet
 
@@ -33,19 +33,19 @@ Marvin can ask a published service itself: *"is the pool pump on?"* reads openHA
 - **Some reads change things** — OpenSprinkler switches a station on with a GET. Tick **Reading can change things here — Marvin always asks** on the service's page in the Explorer, under **Sign people in for it**. Every read there then waits for your yes, like a write.
 - **A write** (POST, PUT, PATCH or DELETE) is a **Chat action**: a card, or a mailed confirmation during an errand. Nothing is written until you say yes.
 
-Its card shows, always, the exact call — *"Sends POST /rest/items/PoolPump to openhab on Cabin, with "ON"."* That line is what you are really approving. Then Marvin [carries on](#marvin-carries-on-after-your-yes).
+Its card shows, always and in full view, the exact call in Vaier's own words — *"Sends POST /rest/items/PoolPump to openhab on Cabin, with "ON"."* That line is what you are really approving. Marvin writes the headline above it, except once the conversation or errand has read text from outside Vaier (a web page, a log, a service's reply): then Vaier writes the headline too — *"Send POST /rest/items/PoolPump to openhab on Cabin."* Then Marvin [carries on](#marvin-carries-on-after-your-yes).
 
 Only services Vaier publishes can be named, and the path must stay inside the service. Marvin never sees the credential. Streams and HTTPS backends with a self-signed certificate can't be reached.
 
 ## Acting, with your click
 
-Chat can also *act*, but never on its own say-so. It can propose letting a waiting phone in or refusing it, backing up a machine now, updating a container, installing a machine's pending OS updates, lifting a block, or trusting an address — each a verb the Explorer already has a button for.
+Chat can also *act*, but never on its own say-so. It can propose letting a waiting phone in or refusing it, backing up a machine now, updating a container, installing a machine's pending OS updates, lifting a block, or trusting an address — each a verb the Explorer already has a button for. Where the Explorer withholds that button, such as for a container started with `docker run`, Chat says why instead of offering a card.
 
 A proposal puts a **Confirmation** card in the pane with a button that says exactly what it will do. Nothing runs until you click it, and the card is gone in ten minutes either way.
 
 Every card has a plain **headline** — *"Update mosquitto on Cabin to its latest version."* — and **details** underneath with the exact technical facts.
 
-OS updates take minutes; the outcome joins your Chat thread when done. See [OS updates](EXPLORER.md#os-updates).
+OS updates and container updates take minutes; the outcome joins your Chat thread when done. See [OS updates](EXPLORER.md#os-updates).
 
 ### Marvin carries on after your yes
 
@@ -70,6 +70,7 @@ An errand can propose the same actions a card can, including writes to a service
 - The link sits behind Vaier's sign-in and shows the same headline and details, with **Do it** and **No**. Opening it never runs anything; only **Do it** does.
 - It works once, for 24 hours, and only for you.
 - The same question waits as a card in Chat, so a mail lost to a spam filter can still be answered there. Whichever you answer first wins.
+- A container update you said yes to from the mail that then fails is mailed to you too, since nobody is watching the screen.
 - At most three wait at once. Without mail set up, nothing is proposed by mail.
 
 ## Memory

@@ -33,7 +33,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 - up to three suggestions of what to do next;
 - a newer Vaier (**Update Vaier**), and newer container images (**See them**).
 
-A row goes the moment its problem clears. **When nothing needs you, the list shows nothing and takes no room.**
+A button about a setting, such as **Set up mail** or **Check mail**, opens Settings at that item, unfolded. **Update Vaier** asks once, then updates. A row goes the moment its problem clears. **When nothing needs you, the list shows nothing and takes no room.**
 
 Machines are **grouped by site**: the Vaier server's site first, then each house with a server peer, then phones and laptops under **Devices**. A machine never moves when trouble comes or goes; its card wears a short mark instead ("Backup failed"). A machine's own page opens on its own Needs you rows.
 
@@ -96,23 +96,23 @@ Vaier cannot start, stop or read logs — use the shell. Its one action is **Upd
 
 ### The backup server's own entry
 
-Pick the fleet's backup server with **Make this the fleet's backup server** on a machine's page. It then shows **Backups kept here**, one per machine; Vaier creates them, you never do. **Forget these backups** forgets them in Vaier without erasing any archive, once no machine backs up there any more. The manual tools (**Provision**, **Authorize a machine**, …) sit under a warning fold: they are for recovery. See [BACKUP](BACKUP.md).
+Pick the fleet's backup server with **Make this the fleet's backup server** on a machine's page. It then shows **Backups kept here**, one per machine; Vaier creates them, you never do. **Forget these backups** takes them off the list once no machine backs up there any more; no archive is erased and the survival kit keeps their passphrase. The manual tools (**Provision**, **Authorize a machine**, …) sit under a warning fold: they are for recovery. See [BACKUP](BACKUP.md).
 
 ### Selection, transfers and viewing files
 
 **Tick files to build a Selection**; it survives moving between folders and machines. The bar above the listing carries every verb that applies.
 
 - **View** images, PDFs, text and video in a new tab. HTML and SVG are download-only.
-- **Download** a file, or a zip of a folder or several items. Anything Vaier cannot read, and anything that is not an ordinary file (a pipe, socket or broken link), is listed in *Not included.txt* inside the zip. A pipe or device on its own is refused rather than downloaded or viewed.
-- **Transfer** a file or folder to another machine, with live progress. What Vaier cannot read is left out, as in a zip, and the finished transfer says how many items it left out and names them. Something of the same name already there is never replaced without asking; a restore from the past puts the past back without asking.
+- **Download** a file, or a zip of a folder or several items. A zip holds no links, so each link inside the folder is listed in *Not included.txt*, with anything Vaier cannot read and anything that is not an ordinary file (a pipe or socket). A pipe or device on its own is refused rather than downloaded or viewed.
+- **Transfer** a file or folder to another machine, with live progress. Links inside the folder arrive as links, pointing where they pointed. What Vaier cannot read, or a link it cannot make there, is left out, and the finished transfer says how many items it left out and names them. Something of the same name already there is never replaced without asking. The one exception is a restore: the past put back on its own path on its own machine goes ahead without asking; pasted anywhere else it asks like any copy.
 - **Upload** by dropping files on the folder or with **Upload files**. Files only. An existing name is never replaced without asking.
-- **Delete**, confirmed by typing the file's name (or, for several, how many). It cannot be undone.
+- **Delete**, confirmed by typing the file's name (or, for several, how many). It cannot be undone. A folder holding something Vaier's sign-in may not remove is deleted only partway: the message says how many items were already gone, and the listing shows what is left.
 
 **Every write goes to the present.** Copying *from* an archive and pasting back is how you restore. Verbs Vaier's sign-in can't perform are hidden; an ACL or read-only mount can still make the machine refuse.
 
 ### Browsing the past (the time rail)
 
-A machine with backups grows a **time rail**: one stop per archive, newest nearest **Now**. Click a stop to see the files as they were. The past turns amber and offers no write verbs. Click **Now** to return. While that machine's backup is running, borg locks the repository and the past shows its error instead; try again when the run ends.
+A machine with backups grows a **time rail**: one stop per archive, newest nearest **Now**. Click a stop to see the files as they were. The past turns amber and offers no write verbs. Links read as they did in the backup; one that leads outside it says **Link, not backed up** and can't be opened, downloaded or restored, because borg never kept what it pointed at. Click **Now** to return. While that machine's backup is running, borg locks the repository and the past shows its error instead; try again when the run ends.
 
 ### Marking what matters (backing up from the file view)
 

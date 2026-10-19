@@ -15,7 +15,7 @@ Open a machine's files in the **Explorer**, tick the folders you would want back
 - runs every night;
 - emails the admins only when a run fails or came back with holes.
 
-**Back up more** takes you back to the files. **Stop backing up** removes a path; when the last one goes, the machine's job goes too. Archives already made are kept, and its time rail still browses them. Deleting a backed-up folder in the Explorer stops backing it up too. A backed-up folder deleted some other way shows up under **Needs you** after the next run, with **Stop backing it up**.
+**Back up more** takes you back to the files. **Stop backing up** removes a path; when the last one goes, the machine's job goes too. Archives already made are kept, and its time rail still browses them. Deleting a backed-up folder in the Explorer stops backing it up too; restoring it from the time rail puts it back under backup with the settings it had, and the finished transfer says **Backed up again**. Vaier remembers this only until it restarts. A backed-up folder deleted some other way shows up under **Needs you** after the next run, with **Stop backing it up**.
 
 A machine you never want backed up can say so: **That's on purpose** on its "Back up" suggestion stops Vaier asking. Its page then reads "Not backed up — on purpose", with **Back it up after all**; backing it up later clears the mark by itself.
 
@@ -40,7 +40,7 @@ The server's `backup` entry has **Server details** and, under the fold *Provisio
 
 ## Backup repository
 
-You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, append-only setting, stored passphrase and archives, with **Edit** and **Forget these backups**. Forgetting is offered once no machine backs up there; it does not erase the archives.
+You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, append-only setting, stored passphrase and archives, with **Edit** and **Forget these backups**. Forgetting is offered once no machine backs up there. It takes them off the list and the time rail and erases nothing: Vaier keeps their passphrase in the survival kit, and backing the machine up again picks them up where they left off.
 
 - A name may hold only letters, digits, `_` and `-`; "NUC 02" becomes `NUC-02`.
 - A new repository's passphrase is shown once with a copy button. Save it — it is never shown again.
@@ -73,7 +73,7 @@ Each **backup run** ends as success, warnings, **incomplete**, failed, or unknow
 - **Incomplete** — some source files couldn't be read. The archive has holes, so this counts as a **failure**: red in the Explorer and a *Backup incomplete* mail naming the lost files.
 - **Warnings** — borg grumbled but lost nothing (a file changed while read). Not a failure; no mail.
 - **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers.
-- **Unknown** — the run ended without a result, usually because the machine restarted. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure.
+- **Unknown** — the run ended without a result, usually because the machine restarted, or Vaier lost touch with the machine mid-run and still couldn't reach it 12 hours later. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure.
 
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 
@@ -96,7 +96,7 @@ The **survival kit** fixes that: every repository's address and passphrase, the 
 - **Vaier picks the hosts and says why**: reachable servers, never itself, spread across sites. It tells you whether anything written now outlives this server.
 - Each copy is `vaier-survival-kit.txt` (`0600`) in the SSH user's home.
 - **Opening it needs no Vaier**: the `openssl enc -aes-256-cbc -pbkdf2 -d` command is printed at the top of every copy, with its date.
-- **The recovery key** is Vaier's own key on the backup server. It can read every repository, and add archives, but never delete one. If Vaier could not place it there, the kit says so and gives the line to add by hand.
+- **The recovery key** is Vaier's own key on the backup server. It can read every repository, and add archives, but never delete one. If Vaier could not place it there, the kit says so and gives the line to add by hand. Vaier uses it too: when a machine can't be reached or is gone, its archives are still listed, read by another machine that backs up (the key is wiped from it straight after). Browsing and restoring them in Files still needs the machine itself.
 - **Vaier keeps them current itself**: a new repository, passphrase, job or machine name rewrites every copy, as does changing the kit passphrase.
 
 ---

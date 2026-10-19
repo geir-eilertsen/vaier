@@ -28,7 +28,7 @@ A stack with **no provider configured** still starts, with one door for one acco
 docker compose logs vaier
 ```
 
-The [installer](ADVANCED.md#the-installer) prints the same three lines for you when run at a terminal. Open the console and press **Sign in with the first-run password**. That first sign-in makes you the admin.
+Put `sudo` in front if your user is not in the `docker` group. The [installer](ADVANCED.md#the-installer) prints the same three lines for you when run at a terminal. Open the console and press **Sign in with the first-run password**. That first sign-in makes you the admin.
 
 - The account's email is `VAIER_ADMIN_EMAIL` if set, otherwise `ACME_EMAIL`. The password is kept in `./vaier/config/first-run-password` (mode `0600`).
 - **The door closes on its own** once an **admin signs in through a new provider** added from **People → Sign-in providers** (or at once, for one added through `.env`).
@@ -67,7 +67,7 @@ Manage who can sign in from **People** in the navigation bar. Each identity — 
 - **Let in** — everyone with access, admins first, then users. The **…** menu offers **Make an admin** / **Make a user**, **Change groups** and **Remove access**. **Add a person** lets someone in before their first sign-in.
 - **Sign-in providers** — Google and GitHub (above).
 
-A first-time sign-in mails every admin (if SMTP is configured).
+A first-time sign-in mails every admin (if SMTP is configured). **Turn away** and **Remove access** stick: that person is kept out quietly — they never wait in People again and no admin is mailed when they try. To let them in later, use **Add a person** with their address.
 
 - Admins reach everything; pending identities reach nothing.
 - **Access groups** (e.g. `devs`, `family`) gate individual services.
@@ -87,7 +87,7 @@ For a service behind sign-in, open its entry in the **Explorer** and use the **A
 
 ## Service credentials
 
-Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs *Only people who sign in to Vaier* under **Who can open it**. It also needs an address of its own: on an address shared by more than one service behind social login, a login would reach every one of them, so Vaier will not set or send it. Unpublishing a service drops the logins set on its address.
+Some services keep a login of their own behind social login — openHAB's API, say. A **service credential** is a username and password Vaier hands the service for every person it lets in. In the **Explorer**, open the published service and fill in **The login Vaier gives it** under **Sign people in for it**. It needs *Only people who sign in to Vaier* under **Who can open it**. It also needs an address of its own: on an address shared by more than one service behind social login, a login would reach every one of them, so Vaier will not set or send it. Publishing a second signed-in service on an address that already has a login is refused; if an address ends up shared anyway, the service page marks its login **Paused** until one of them moves. Unpublishing a service drops the logins set on its address.
 
 - **Shared** — for everyone without their own; all of them are one user to the service.
 - **Personal** — for one person, so the service can tell them apart.

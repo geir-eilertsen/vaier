@@ -22,7 +22,8 @@
 # start the stack, and prints your first sign-in. Without a terminal — piped to a log, CI, or Vaier's own
 # self-update, which sets VAIER_NONINTERACTIVE=1 — it only fetches and scaffolds, and asks nothing.
 #
-# Override the ref (branch, tag or commit) with VAIER_REF, e.g. VAIER_REF=v1.2.3.
+# Override the ref (branch, tag or commit) with VAIER_REF, e.g. VAIER_REF=<commit>. A commit or a v-tag
+# also pins the Vaier image to that build; a branch follows :latest.
 set -euo pipefail
 
 REPO="${VAIER_REPO:-geir-eilertsen/vaier}"
@@ -53,15 +54,32 @@ die() { printf '\033[1;31m error:\033[0m %s\n' "$*" >&2; exit 1; }
 
 command -v curl >/dev/null 2>&1 || die "curl is required."
 command -v tar  >/dev/null 2>&1 || die "tar is required."
+# The Vaier image is built for amd64 only; elsewhere it would crash-loop with "exec format error".
+[ "$(uname -m)" = x86_64 ] || die "Vaier runs only on x86-64 (amd64) machines, and this one is $(uname -m)."
 
 # A person at a terminal. Under `curl | bash` stdin is the script itself, so answers come from /dev/tty.
 interactive=false
 if [ -z "${VAIER_NONINTERACTIVE:-}" ] && [ -t 1 ] && { : </dev/tty; } 2>/dev/null; then interactive=true; fi
 
+# `configs: content:` in docker-compose.yml needs Compose 2.23; an older one fails with a schema error.
+COMPOSE_MIN=2.23.0
+compose_version() { docker compose version --short 2>/dev/null | sed 's/^v//'; }
+compose_too_old() {
+  local v; v=$(compose_version)
+  [ -z "$v" ] || [ "$(printf '%s\n' "$COMPOSE_MIN" "$v" | sort -V | head -1)" != "$COMPOSE_MIN" ]
+}
+compose_advice() {
+  echo "Vaier needs Docker Compose v${COMPOSE_MIN%.0} or newer, and this machine has ${1:-none}. Docker's own packages bring it:  curl -fsSL https://get.docker.com | sh"
+}
+# Printed commands carry sudo when this user can't reach the Docker daemon without it.
+docker_sudo() {
+  if [ "$(id -u)" -ne 0 ] && command -v docker >/dev/null 2>&1 && ! docker info >/dev/null 2>&1; then echo 'sudo '; fi
+}
+
 if ! command -v docker >/dev/null 2>&1; then
   $interactive || warn "docker not found. Install it first:  curl -fsSL https://get.docker.com | sh"
-elif ! docker compose version >/dev/null 2>&1; then
-  warn "docker compose v2 not found. Vaier needs Compose v2.23+ (bundled with current Docker)."
+elif compose_too_old; then
+  warn "$(compose_advice "$(compose_version)")"
 fi
 
 # A premature `docker compose up` (before these files existed) makes dockerd create the bind-mount
@@ -80,6 +98,9 @@ if [ "${#blocked[@]}" -gt 0 ]; then
      docker compose down 2>/dev/null; sudo rm -rf ${blocked[*]}
    then re-run this installer."
 fi
+
+# A pin an earlier run (or a hand edit) left on the image, so a run that drops it can say so.
+prev_image=$(sed -n 's|^ *image: geireilertsen/vaier:||p' docker-compose.yml 2>/dev/null | head -1 || true)
 
 say "Fetching Vaier runtime files (${REPO}@${REF}) — no git history."
 # Extract only the runtime members from the tarball. The archive's top dir is vaier-<ref>; the
@@ -101,6 +122,20 @@ curl -fsSL "https://codeload.github.com/${REPO}/tar.gz/${REF}" \
 say "Runtime files in place:"
 printf '   %s\n' "${RUNTIME_PATHS[@]}"
 
+# A commit or a release tag pins the image to the build made from it (Docker Hub tags it <commit> and
+# <version>). A branch follows :latest, and so does the self-update, which names src-<commit>.
+image_tag=''
+case "${VAIER_REF:-}" in
+  v[0-9]*) image_tag=${VAIER_REF#v} ;;
+  *) if [[ "${VAIER_REF:-}" =~ ^[0-9a-f]{40}$ ]]; then image_tag=$VAIER_REF; fi ;;
+esac
+if [ -n "$image_tag" ]; then
+  sed -i "s|image: geireilertsen/vaier:latest|image: geireilertsen/vaier:${image_tag}|" docker-compose.yml
+  say "Vaier's image is pinned to geireilertsen/vaier:${image_tag}."
+elif [ -n "$prev_image" ] && [ "$prev_image" != latest ] && [[ "${VAIER_REF:-}" != src-* ]]; then
+  warn "docker-compose.yml was pinned to geireilertsen/vaier:${prev_image} and now follows :latest. Re-run with VAIER_REF=<that release's commit> to keep a pin."
+fi
+
 if [ -f .env ]; then
   say ".env already exists — leaving it untouched."
 else
@@ -108,9 +143,9 @@ else
   cat > .env <<'EOF'
 # --- Vaier configuration — fill these in, then run: docker compose up -d ---
 
-# Your base domain, and the Let's Encrypt contact email.
-VAIER_DOMAIN=yourdomain.com
-ACME_EMAIL=you@yourdomain.com
+# Your base domain (e.g. example.com), and the Let's Encrypt contact email. Both are required.
+VAIER_DOMAIN=
+ACME_EMAIL=
 
 # Social sign-in — optional, and it can wait. With none configured the stack opens a first-run
 # door: 'docker compose logs vaier' prints a one-account password, and that first sign-in becomes
@@ -129,7 +164,7 @@ VAIER_ADMIN_EMAIL=
 VAIER_TZ=UTC
 
 # DNS is one record, made once at your DNS host before the first 'up' — any provider will do:
-#   *.yourdomain.com   A   <this server's public IP>
+#   *.<VAIER_DOMAIN>   A   <this server's public IP>
 # Vaier never writes DNS; every service it publishes resolves through that one record.
 EOF
   chmod 600 .env
@@ -209,11 +244,20 @@ if $interactive; then
 
     # Vaier makes no DNS; the one wildcard record is the operator's, so say exactly which one.
     ip=$(curl -fsS -m 5 https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]' || true)
+    [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ip=''
+    # Off EC2 this is the only way Vaier learns its own address, to confirm the record points here.
+    if [ -n "$ip" ] && [ -z "$(env_value VAIER_PUBLIC_IP)" ]; then set_env VAIER_PUBLIC_IP "$ip"; fi
     seen=$(getent ahostsv4 "vaier.$domain" 2>/dev/null | awk 'NR == 1 { print $1 }' || true)
     if [ -n "$ip" ] && [ "$seen" = "$ip" ]; then
       say "DNS: vaier.$domain already points at this server ($ip)."
+    elif [ -n "$seen" ] && [ -n "$ip" ]; then
+      # Starting now would send Let's Encrypt's challenges to that other server, and fail.
+      warn "vaier.$domain points at $seen, not at this server. Change this one record at your DNS host before starting:
+     *.$domain   A   $ip"
+    elif [ -n "$seen" ]; then
+      warn "vaier.$domain points at $seen. Make sure that is this server's public IP before starting."
     else
-      warn "vaier.$domain doesn't point at this server yet${seen:+ (it points at $seen)}. Make this one record at your DNS host:
+      warn "vaier.$domain doesn't resolve yet. Make this one record at your DNS host:
      *.$domain   A   ${ip:-<the public IP of this server>}
    You can start now: Vaier waits for it before asking Let's Encrypt for certificates."
     fi
@@ -222,10 +266,29 @@ if $interactive; then
   if ! command -v docker >/dev/null 2>&1 && confirm "Docker isn't installed. Install it now with Docker's official script?"; then
     curl -fsSL https://get.docker.com | $sudo sh || die "Docker did not install — see the output above."
   fi
-  if command -v docker >/dev/null 2>&1; then
+  # Reasons a start would fail half-way, said before offering one.
+  blockers=()
+  if command -v docker >/dev/null 2>&1 && compose_too_old; then blockers+=("$(compose_advice "$(compose_version)")"); fi
+  if $fresh && command -v ss >/dev/null 2>&1; then
+    for want in tcp:80 tcp:443 udp:51820; do
+      proto=${want%%:*} port=${want#*:}
+      flags=-Hltnp; [ "$proto" = udp ] && flags=-Hlunp
+      # Root names the holder; without it ss still says the port is taken.
+      line=$( { $sudo ss "$flags" "sport = :$port" 2>/dev/null || ss "${flags%p}" "sport = :$port" 2>/dev/null; } \
+        | head -1 || true)
+      [ -n "$line" ] || continue
+      holder=$(grep -o 'users:(("[^"]*"' <<<"$line" | head -1 | cut -d'"' -f2 || true)
+      blockers+=("${proto^^} port $port is already in use${holder:+ by $holder}, and Vaier needs it. Stop that first.")
+    done
+  fi
+  for b in "${blockers[@]}"; do warn "$b"; done
+
+  if command -v docker >/dev/null 2>&1 && [ "${#blockers[@]}" -eq 0 ]; then
     docker_cmd=(docker); docker info >/dev/null 2>&1 || docker_cmd=($sudo docker)
     if confirm "$($fresh && echo "Start Vaier now?" || echo "Bring Vaier up to date now?")"; then
+      # The masquerade sidecar lives in wireguard's network namespace and dies when wireguard is recreated.
       "${docker_cmd[@]}" compose pull --quiet && "${docker_cmd[@]}" compose up -d \
+        && "${docker_cmd[@]}" compose up -d --force-recreate --no-deps wireguard-masquerade \
         || die "The stack didn't start — see the output above."
       if ! $fresh; then say "Vaier is up to date."; exit 0; fi
       say "Waiting for Vaier to start (a minute or two the first time)…"
@@ -244,13 +307,14 @@ if $interactive; then
       elif [ "$started" -gt 0 ]; then
         say "Vaier is up: https://vaier.$domain"
       else
-        warn "Vaier hasn't finished starting yet. Watch it with:  docker compose logs -f vaier"
+        warn "Vaier hasn't finished starting yet. Watch it with:  $(docker_sudo)docker compose logs -f vaier"
       fi
       exit 0
     fi
   fi
 fi
 
+ds=$(docker_sudo)
 domain=$(env_value VAIER_DOMAIN)
 if [ -n "$domain" ] && [ "$domain" != yourdomain.com ]; then
   # The interactive run already worked out the address and whether DNS points here.
@@ -262,9 +326,12 @@ if [ -n "$domain" ] && [ "$domain" != yourdomain.com ]; then
 
 $(say "Done.")
 Next:
-${dns_step}  - Start the stack — docker compose up -d
-  - Sign in         — docker compose logs vaier   prints the first-run password at the bottom;
+${dns_step}  - Start the stack — ${ds}docker compose up -d
+  - Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin.
+
+Upgrading an existing install? Bring it up, then recreate the sidecar that rejoins WireGuard:
+  ${ds}docker compose up -d && ${ds}docker compose up -d --force-recreate --no-deps wireguard-masquerade
 EOF
 else
   cat <<EOF
@@ -274,11 +341,9 @@ Next:
   1. Edit .env       — set your domain and Let's Encrypt email; nothing else is required.
                        (every auto-generated secret is already filled in for you.)
   2. Point DNS       — one record, once:  *.<domain>  A  <this server's public IP>
-  3. Start the stack — docker compose up -d
-  4. Sign in         — docker compose logs vaier   prints the first-run password at the bottom;
+  3. Start the stack — ${ds}docker compose up -d
+  4. Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin. Add Google or GitHub whenever you
                        want to invite anyone else.
-
-Upgrading an existing install? Steps 1 and 2 are already done — just: docker compose up -d
 EOF
 fi
