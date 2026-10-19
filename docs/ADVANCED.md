@@ -22,7 +22,7 @@ Configuration and workflows beyond the basic Quick Start. If you're just getting
 
 Sign-in providers and mail are set later in the console — Google or GitHub under **People → Sign-in providers** ([AUTH](AUTH.md#registering-google-or-github)), mail under **Settings**.
 
-**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Updating by hand instead, run `docker compose up -d --force-recreate --no-deps wireguard-masquerade` after `docker compose up -d`: that sidecar dies whenever WireGuard is recreated, and without it Vaier cannot reach your LANs.
+**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Updating by hand instead is `docker compose up -d`; on an install from before 1.2, also run `docker rm -f wireguard-masquerade` once.
 
 The commands it prints carry `sudo` when your user is not in the `docker` group.
 

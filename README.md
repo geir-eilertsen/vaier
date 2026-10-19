@@ -47,7 +47,7 @@ Then add your machines from the **Explorer**. Installer details and running with
 
 ## Updating
 
-Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. Updating by hand? Follow `docker compose up -d` with `docker compose up -d --force-recreate --no-deps wireguard-masquerade`, or Vaier loses its way to your LANs. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
+Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. Updating by hand is `docker compose up -d`. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
 
 ## Removing Vaier
 

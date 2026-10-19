@@ -286,10 +286,10 @@ if $interactive; then
   if command -v docker >/dev/null 2>&1 && [ "${#blockers[@]}" -eq 0 ]; then
     docker_cmd=(docker); docker info >/dev/null 2>&1 || docker_cmd=($sudo docker)
     if confirm "$($fresh && echo "Start Vaier now?" || echo "Bring Vaier up to date now?")"; then
-      # The masquerade sidecar lives in wireguard's network namespace and dies when wireguard is recreated.
       "${docker_cmd[@]}" compose pull --quiet && "${docker_cmd[@]}" compose up -d \
-        && "${docker_cmd[@]}" compose up -d --force-recreate --no-deps wireguard-masquerade \
         || die "The stack didn't start — see the output above."
+      # Retired: an older install's sidecar would restart for ever in a namespace that no longer exists.
+      "${docker_cmd[@]}" rm -f wireguard-masquerade >/dev/null 2>&1 || true
       if ! $fresh; then say "Vaier is up to date."; exit 0; fi
       say "Waiting for Vaier to start (a minute or two the first time)…"
       first_sign_in='' started=0
@@ -330,8 +330,8 @@ ${dns_step}  - Start the stack — ${ds}docker compose up -d
   - Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin.
 
-Upgrading an existing install? Bring it up, then recreate the sidecar that rejoins WireGuard:
-  ${ds}docker compose up -d && ${ds}docker compose up -d --force-recreate --no-deps wireguard-masquerade
+Upgrading an existing install? Steps 1 and 2 are already done — bring it up:
+  ${ds}docker compose up -d && ${ds}docker rm -f wireguard-masquerade 2>/dev/null
 EOF
 else
   cat <<EOF

@@ -85,6 +85,11 @@ A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **sk
 
 Open a **backup repository** entry to list its archives. To restore, open an archive with the Explorer's time rail and copy files out of it (see [`docs/EXPLORER.md`](EXPLORER.md)).
 
+**A dead or removed machine's archives** stay reachable once the survival kit is written. A machine Vaier can't reach keeps its time rail; a machine you removed is opened from its entry under the backup server: click an archive. Copy what you need onto a replacement machine; the paste asks before replacing anything there. Caveats:
+
+- The machine that reads it needs the backup program and a way to the backup server, so it is the backup server's machine or one that backs up. Vaier tries up to three in turn.
+- A backup run of the machine closes any archive of it that is open elsewhere.
+
 ---
 
 ## Survival kit
@@ -96,7 +101,7 @@ The **survival kit** fixes that: every repository's address and passphrase, the 
 - **Vaier picks the hosts and says why**: reachable servers, never itself, spread across sites. It tells you whether anything written now outlives this server.
 - Each copy is `vaier-survival-kit.txt` (`0600`) in the SSH user's home.
 - **Opening it needs no Vaier**: the `openssl enc -aes-256-cbc -pbkdf2 -d` command is printed at the top of every copy, with its date.
-- **The recovery key** is Vaier's own key on the backup server. It can read every repository, and add archives, but never delete one. If Vaier could not place it there, the kit says so and gives the line to add by hand. Vaier uses it too: when a machine can't be reached or is gone, its archives are still listed, read by another machine that backs up (the key is wiped from it straight after). Browsing and restoring them in Files still needs the machine itself.
+- **The recovery key** is Vaier's own key on the backup server. It can read every repository, and add archives, but never delete one. If Vaier could not place it there, the kit says so and gives the line to add by hand. Vaier uses it too: when a machine can't be reached or is gone, the backup server's machine or another machine that backs up reads its archives instead, for listing, browsing and restoring in Files. That machine keeps no copy of the key: it is wiped as soon as the listing ends or the archive is open.
 - **Vaier keeps them current itself**: a new repository, passphrase, job or machine name rewrites every copy, as does changing the kit passphrase.
 
 ---

@@ -147,7 +147,7 @@ Choose **raw TCP** instead of **website** to publish a **stream**: clients conne
 
 A public page that links to your published services, switching to LAN URLs when you're on the same network. Strangers see only public services. Signed-in users also see the social-login services they may reach; admins see all.
 
-You can hide internal-only services. A red dot and a line such as *nas isn't answering* mean the machine is confirmed unreachable. A signed-out visitor who can see nothing is asked to **Sign in**.
+You can hide internal-only services. A red dot and **Not answering** under a tile mean the machine is confirmed unreachable. A signed-out visitor who can see nothing is asked to **Sign in**.
 
 ---
 

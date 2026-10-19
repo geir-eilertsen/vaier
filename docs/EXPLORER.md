@@ -114,6 +114,8 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 
 A machine with backups grows a **time rail**: one stop per archive, newest nearest **Now**. Click a stop to see the files as they were. The past turns amber and offers no write verbs. Links read as they did in the backup; one that leads outside it says **Link, not backed up** and can't be opened, downloaded or restored, because borg never kept what it pointed at. Click **Now** to return. While that machine's backup is running, borg locks the repository and the past shows its error instead; try again when the run ends.
 
+**When a machine dies, its past still opens.** If Vaier can't reach a machine, its time rail works as usual: another machine reads the backups for it, and the pane's head says *Read from ‹machine› while ‹machine› can't be reached*. Browse, view, download, or copy files and folders onto any machine, a replacement included; a paste onto another machine asks before replacing anything. A machine you removed from the fleet has no Files entry: open its backups under the backup server's entry and click an archive. Its past opens the same way, without a **Now**. This needs the survival kit to have been written (see [BACKUP](BACKUP.md#survival-kit)); until then the past says so.
+
 ### Marking what matters (backing up from the file view)
 
 **Mark what matters and Vaier backs it up.** Tick files or folders and click **Back up**. Vaier sets up everything else, including the borg client on a machine's first back-up.
