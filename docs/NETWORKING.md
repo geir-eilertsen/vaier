@@ -64,7 +64,7 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the machine's **Sign-in, details and removal** fold offers:
 
 - **Update its setup** — keeps the keypair and puts the new setup on the machine itself, where Vaier can sign in to it. It runs at once if Vaier can become root there without a password; otherwise the pane shows the one `sudo bash` line to type in its shell. The tunnel drops for a few seconds while it runs.
-- **Download its setup again** (Reissue) — the same setup as a file, for a machine Vaier cannot sign in to, or a lost config.
+- **Download its setup again** (Reissue) — the same setup as a file. Offered instead of **Update its setup** when Vaier has no sign-in for the machine or its tunnel is down — then run it there, or use its setup link.
 - **Give it new keys** (Regenerate), under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app
