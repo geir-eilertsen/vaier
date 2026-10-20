@@ -37,20 +37,20 @@ In the **Explorer**, choose **Add a machine**. It asks what you are adding and g
 | A server | VPN subnet only | A **setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container, and asks for your password once to install Docker and the tunnel. The link is single-use and expires after about 15 minutes |
 | An Android phone or Windows PC | All traffic | The Vaier app and a join code — Vaier makes no config |
 
-The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it. A relay only passes that network on once its setup has run with it, so routing, changing or clearing a relay's LAN marks its setup out of date: **Download its setup again** and run it on the relay to finish.
+The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it. A relay only passes that network on once its setup has run with it, so routing, changing or clearing a relay's LAN marks its setup out of date: **Update its setup** (or download it and run it on the relay) to finish.
 
 Things worth knowing:
 
 - **A full-tunnel client can't reach the LAN it is sitting on.** Its kill-switch drops that traffic. At home you don't need the tunnel for it; away, the same address works through the tunnel.
 - **Setup scripts refuse to run on the wrong machine** — for example a Vaier server, or a host that would lose its own uplink. A machine is a peer *or* a LAN server, never both. Re-run with `VAIER_FORCE=1` if you truly mean it.
-- **A server finds Vaier again by itself** when your Vaier server's public address changes — within a few minutes, no power cycle. A machine set up before it learned this says **its setup is out of date**: **Download its setup again** and run it there once, *while the current address still works*.
+- **A server finds Vaier again by itself** when your Vaier server's public address changes — within a few minutes, no power cycle. A machine set up before it learned this says **its setup is out of date**: **Update its setup** once, *while the current address still works*.
 - **Re-running a setup on a working machine is safe** — run it as the user that first set it up, usually `sudo bash setup-<machine>.sh`. If the run fails, it puts back the tunnel the machine had; it also carries on if the terminal you ran it from drops when the old tunnel stops.
 
 ### Site-to-site routing
 
 With two or more relay peers, a machine on one site's LAN can reach a machine on another's, through both relays and the Vaier server. The far host sees the relay as the sender and needs no configuration. A LAN host that should *start* such connections needs the [LAN setup script](#lan-servers-and-the-lan-scanner).
 
-**Adding, removing or re-addressing a relay makes every other server peer's config out of date.** Each one says so in its pane: **Download its setup again** and run it there. The keypair is kept.
+**Adding, removing or re-addressing a relay makes every other server peer's config out of date.** Each one says so in its pane: **Update its setup**, or download it and run it there. The keypair is kept.
 
 ### Names, descriptions and status
 
@@ -63,7 +63,8 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 
 A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the machine's **Sign-in, details and removal** fold offers:
 
-- **Download its setup again** (Reissue) — keeps the keypair. Use it for a lost config, or when the pane says its setup is out of date.
+- **Update its setup** — keeps the keypair and puts the new setup on the machine itself, where Vaier can sign in to it. It runs at once if Vaier can become root there without a password; otherwise the pane shows the one `sudo bash` line to type in its shell. The tunnel drops for a few seconds while it runs.
+- **Download its setup again** (Reissue) — the same setup as a file, for a machine Vaier cannot sign in to, or a lost config.
 - **Give it new keys** (Regenerate), under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app

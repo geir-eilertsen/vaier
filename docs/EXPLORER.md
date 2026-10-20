@@ -60,7 +60,7 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 
 A door is greyed, with the reason on hover, when Vaier can't sign in. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Download its setup again**, and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
+Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Update its setup**, **Download its setup again**, and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
