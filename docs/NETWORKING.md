@@ -43,7 +43,8 @@ Things worth knowing:
 
 - **A full-tunnel client can't reach the LAN it is sitting on.** Its kill-switch drops that traffic. At home you don't need the tunnel for it; away, the same address works through the tunnel.
 - **Setup scripts refuse to run on the wrong machine** — for example a Vaier server, or a host that would lose its own uplink. A machine is a peer *or* a LAN server, never both. Re-run with `VAIER_FORCE=1` if you truly mean it.
-- **A relay set up before 23 September 2026 needs its setup link re-run** to survive Docker daemon restarts and carry long replies from tiny devices.
+- **A server finds Vaier again by itself** when your Vaier server's public address changes — within a few minutes, no power cycle. A machine set up before it learned this says **its setup is out of date**: **Send its setup again** and run the line there once, *while the current address still works*.
+- **Re-running a setup on a working machine is safe.** If the run fails, it puts back the tunnel the machine had; it also carries on if the terminal you ran it from drops when the old tunnel stops.
 
 ### Site-to-site routing
 
