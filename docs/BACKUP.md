@@ -8,7 +8,7 @@ Back to [README](../README.md).
 
 ## Tick what matters
 
-Open a machine's files in the **Explorer**, tick the folders you would want back if the machine died, and press **Back up**. That is your one decision. Vaier does the rest:
+Open a machine's files in the **Explorer**, tick the folders you would want back if the machine died, and press **Back up**. That is your one decision. **Back up** appears once the fleet has a [backup server](#backup-server) and Vaier can sign in to the machine. Vaier does the rest:
 
 - creates a repository for the machine on the backup server, with a generated passphrase;
 - prepares the machine on its first backup (trusts its key, installs the client);
@@ -25,11 +25,11 @@ The archives are [borg](https://www.borgbackup.org/) repositories on the fleet's
 
 ## Backup server
 
-The fleet has **at most one**. On a machine's Inspector in the **Explorer**, use **Make this the fleet's backup server** (offered only while none is designated). Vaier looks first and says what it will do in one sentence: use the borg server it found there, or set up a **pinned** borg-server container on the local disk with the most room. Press **Use it** or **Set it up**. **Change details** opens the coordinates form, and it opens on its own when Vaier cannot see the machine's containers or disks.
+The fleet has **at most one**. While it has none, every server and NAS in the **Explorer** suggests itself under **What to do next**: "Make ‹name› the backup server", with **Set it up**. A machine of another kind gets the suggestion once you change its device category (**Edit details**) to server or NAS. The fleet's **Needs you** list says "Nothing in your fleet is backed up", with **Set it up** when the fleet has a NAS. Vaier looks first and says what it will do in one sentence: use the borg server it found there, or set up a **pinned** borg-server container on the local disk with the most room. Press **Use it** or **Set it up**; **Change details** opens the coordinates form. When Vaier cannot see what runs on the machine, it asks one thing: the folder to keep backups in, suggested on the roomiest disk it can read. **Set it up** puts a backup server there. Already run a borg server on it? Open **Already running a backup server there?**, give its address and press **Use that server**.
 
 The server's `backup` entry has **Server details** and, under the fold *Provision, authorize or remove this backup server*: **Provision**, **Authorize a machine**, **Setup script**, **Edit coordinates**, **Remove designation**.
 
-- Where Vaier can't drive docker over SSH (a Synology NAS, say), it stages **setup.sh** on the host and hands you one command: `sudo bash <path>`. If it can't reach the host, download setup.sh from the UI.
+- Where Vaier can't drive docker over SSH (a Synology NAS, say), it stages **setup.sh** on the host and hands you one command: `sudo bash <path>`. Where Vaier can sign in there, **Run it in ‹machine›'s shell** opens its shell with the command typed: press Enter, and **Send password** if sudo asks. If it can't reach the host, download setup.sh from the UI.
 - If the backup server goes quiet, Vaier emails every admin, and again when it recovers.
 
 **Authorize a machine** trusts a machine's SSH key on the server. The key is confined to that machine's own repositories, so one compromised machine can't touch another's archives. It also pins the server's host key on the machine.
@@ -40,13 +40,12 @@ The server's `backup` entry has **Server details** and, under the fold *Provisio
 
 ## Backup repository
 
-You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, append-only setting, stored passphrase and archives, with **Edit** and **Forget these backups**. Forgetting is offered once no machine backs up there. It takes them off the list and the time rail and erases nothing: Vaier keeps their passphrase in the survival kit, and backing the machine up again picks them up where they left off.
+You never create one by hand: **Back up** makes one per machine. Each is an entry under the backup server's `backup` entry, showing its path, stored passphrase and archives. **Forget these backups** is offered once no machine backs up there. It takes them off the list and the time rail and erases nothing: Vaier keeps their passphrase in the survival kit, and backing the machine up again picks them up where they left off.
 
 - A name may hold only letters, digits, `_` and `-`; "NUC 02" becomes `NUC-02`.
-- A new repository's passphrase is shown once with a copy button. Save it — it is never shown again.
-- A repository's passphrase can't be changed afterwards; **Edit** covers its path and append-only setting.
+- Vaier generates each passphrase and keeps it in the survival kit; it can't be changed afterwards.
 
-When a run fails because borg is missing, the machine's `backup` entry and **Needs you** offer **Get this machine ready**. It installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need. Where Vaier can't gain root, it hands you a `sudo bash <path>` command to run in the machine's shell.
+When a run fails because borg is missing, the machine's `backup` entry and **Needs you** offer **Get this machine ready**. It installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need. Where Vaier can't gain root, it hands you a `sudo bash <path>` command, with **Run it in ‹machine›'s shell** to type it there for you.
 
 ---
 
@@ -75,9 +74,11 @@ Each **backup run** ends as success, warnings, **incomplete**, failed, or unknow
 - **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers.
 - **Unknown** — the run ended without a result, usually because the machine restarted, or Vaier lost touch with the machine mid-run and still couldn't reach it 12 hours later. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure.
 
+Once a week, between nightly runs, Vaier has borg read each repository back on the backup server, for at most half an hour at a time; a large repository is covered over several weeks. It emails the admins only when a check finds damage, once. While a check runs, **Back up now** on that machine says so and asks you to try again later.
+
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 
-Each machine keeps its borg passphrase file in `~/.vaier-backup`. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself.
+Each machine keeps its borg passphrase file and run logs in `~/.vaier-backup`. After every run Vaier clears out logs older than a week and the passphrase files of backups it no longer keeps. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself.
 
 A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **skipped, not failed**: no run, no red mark, no mail. A machine that is merely off or unreachable at the scheduled hour fails that run, and Vaier keeps trying it every 15 minutes for the rest of the day.
 
@@ -119,11 +120,11 @@ This works only if Vaier backed up its own folder (tick it in the Explorer like 
    sudo -E borg extract 'the repository from the kit'::ARCHIVE home/<user>/vaier
    sudo tar -czpf vaier.tgz home/<user>/vaier
    ```
-4. **Start it on the new server.** Install Docker (`curl -fsSL https://get.docker.com | sh`), copy `vaier.tgz` over, then:
+4. **Start it on the new server.** Install Docker (`curl -fsSL https://get.docker.com | sudo sh`), copy `vaier.tgz` over, then:
    ```bash
    sudo tar -xzpf vaier.tgz -C / && cd ~/vaier && docker compose pull && docker compose up -d
    ```
    Keep the same user and path, or move the folder and keep its owners: Vaier's files must stay owned by uid 1000.
-5. **Give it the old public address** if you can. On a new one, change your `*.<domain>` record, then restart the tunnel on every device and peer: a WireGuard client keeps the address it first looked up. A house you can't reach needs its peer power-cycled.
+5. **Give it the old public address** if you can. On a new one, change your `*.<domain>` record. Servers find the new address by themselves within a few minutes. Phones, laptops and any machine whose setup is out of date keep the address they first looked up: restart their tunnel, or power-cycle one you can't reach.
 
-The restored folder carries Vaier's own key. If `vaier/config/vault.key` is missing, put the kit's **config key** there (`0600`, owned by uid 1000), or set it as `VAIER_VAULT_KEY` in `.env`; without it every stored password and passphrase stays unreadable.
+The restored folder carries Vaier's own key. If `vaier/config/vault.key` is missing, put the kit's **config key** there (`0600`, owned by uid 1000), or set it as `VAIER_VAULT_KEY` in `.env` and run `docker compose up -d`; without it every stored password and passphrase stays unreadable.

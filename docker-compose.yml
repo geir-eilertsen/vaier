@@ -3,6 +3,16 @@
 # .2, so it can never collide with a dynamically-assigned container. Everything else — Vaier's
 # LanRouteAdapter, Traefik's route loop — still resolves the container by DNS name and is unaffected.
 x-wireguard-bridge-ip: &wireguard-bridge-ip "172.20.0.250"
+# Vaier's own, pinned beside Traefik's .251 so docker-proxy, Pi-hole and Traefik's API can answer the two by
+# address (#702) — nothing else on this network may reach them.
+x-vaier-bridge-ip: &vaier-bridge-ip "172.20.0.252"
+
+# Every container's log, capped: Docker's json-file driver keeps it forever otherwise.
+x-container-log: &container-log
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
 
 networks:
   vaier-network:
@@ -10,6 +20,14 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+
+# The sign-in cookie secret reaches both oauth2-proxies as a file (#702): a flag would sit in every
+# `docker inspect`. This line only keeps the "re-run install.sh" message for a .env without it.
+x-oauth2-cookie-secret-required: ${VAIER_OAUTH2_COOKIE_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+
+secrets:
+  oauth2_cookie_secret:
+    environment: VAIER_OAUTH2_COOKIE_SECRET
 
 configs:
   # The tunnel's NAT and the bridge filter, run as a service inside the wireguard container (#696). Compose
@@ -163,6 +181,8 @@ configs:
 
       frontend dockerfrontend
           bind $${BIND_CONFIG}
+          # Only Vaier and Traefik, by their pinned addresses: the network holds third-party containers too (#702).
+          tcp-request connection reject unless { src 172.20.0.251 172.20.0.252 }
           # Vaier's own allowlist (#443), not the upstream env flags. Deny by default; every allow names its
           # method and matches the DECODED path, so an encoded "creat%65" meets no allow and is refused.
           # An RCE in Vaier gets what Vaier needs and nothing more: no create, no pull, no PUT or DELETE,
@@ -189,6 +209,7 @@ configs:
 services:
   wireguard:
     image: lscr.io/linuxserver/wireguard:1.0.20260223-r0-ls126
+    logging: *container-log
     container_name: wireguard
     # Memory caps on every service so one runaway container cannot exhaust this
     # 1.9 GB host and livelock it (2026-07-10). Sized from measured RSS with
@@ -232,6 +253,7 @@ services:
 
   traefik:
     image: traefik:v3.6.25
+    logging: *container-log
     container_name: traefik
     mem_limit: 192m
     cap_add:
@@ -270,7 +292,18 @@ services:
         # There is deliberately no Strict-Transport-Security either. HSTS cannot be taken back once a
         # browser has seen it, so it is a decision of its own — deferred, tracked as issue #342.
         http:
+          # Traefik's API and dashboard (#702): they have no login, so only Vaier, Traefik itself (a published
+          # dashboard is Traefik proxying to itself) and loopback reach them.
+          routers:
+            vaier-traefik-api:
+              entryPoints: [traefik]
+              rule: PathPrefix(`/api`) || PathPrefix(`/dashboard`)
+              service: api@internal
+              middlewares: [vaier-api-sources]
           middlewares:
+            vaier-api-sources:
+              ipAllowList:
+                sourceRange: [127.0.0.1/32, 172.20.0.251/32, 172.20.0.252/32]
             # #351: FIRST on every router EXCEPT the recovery doors — Vaier's own sign-in path (the
             # console on vaier.<domain> bar the phone-join router, oauth2.<domain>, dex.<domain>) —
             # so a banned operator can still sign in and lift the ban. Vaier's routers name it in
@@ -459,7 +492,9 @@ services:
       # (crowdsec/acquis.d/traefik.yaml) — the gap that would otherwise silently break every
       # "malicious HTTP probing results in a block decision" scenario.
       - --accesslog.filepath=/traefik/logs/access.log
-      - --api.insecure=true
+      # The API on its own entrypoint, behind vaier-api-sources (security.yml): Vaier and Traefik only (#702).
+      - --api.dashboard=true
+      - --entrypoints.traefik.address=:8080
       - --providers.docker=true
       - --providers.docker.endpoint=tcp://docker-proxy:2375
       - --providers.docker.exposedbydefault=false
@@ -505,7 +540,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    # Traefik's API/dashboard listens on :8080 (--api.insecure=true above), but the upstream image
+    # Traefik's API/dashboard listens on :8080 (the traefik entrypoint above), but the upstream image
     # only EXPOSEs 80 and 443 — and Vaier discovers publishable services from a container's exposed
     # ports, so the one container of its own stack worth publishing never showed up. `expose` is
     # metadata: it publishes nothing to the host and changes no reachability (the port stays reachable
@@ -543,12 +578,13 @@ services:
 
   docker-proxy:
     image: tecnativa/docker-socket-proxy:v0.5.0
+    logging: *container-log
     container_name: docker-proxy
     mem_limit: 64m
     labels:
       # The haproxy_template's digest (DockerComposeStructureTest names the value). Compose misses an edit
       # inside an inline config, so without this an upgrade keeps the old proxy rules.
-      - vaier.rules-digest=99d4dec2414c
+      - vaier.rules-digest=4e65674e0fc4
     # What passes is the haproxy_template allowlist below, not the image's env flags.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -577,6 +613,7 @@ services:
   # parser alone reads nothing without it.
   crowdsec:
     image: crowdsecurity/crowdsec:v1.8.1
+    logging: *container-log
     container_name: crowdsec
     mem_limit: 256m
     environment:
@@ -611,9 +648,10 @@ services:
 
   # The fleet's DNS. Every phone/laptop peer config says `DNS = 172.20.0.53`, so this address must
   # always answer. No host port: peers reach it through the tunnel. Its admin UI (port 80) is published
-  # like Traefik's dashboard, behind social login — so Pi-hole's own password is switched off.
+  # like Traefik's dashboard, behind social login — so Pi-hole's own password is switched off...
   pihole:
     image: pihole/pihole:2026.09.0
+    logging: *container-log
     container_name: pihole
     mem_limit: 128m
     environment:
@@ -621,6 +659,8 @@ services:
       # Queries arrive from the tunnel, which is not Pi-hole's "local" network.
       FTLCONF_dns_listeningMode: ALL
       FTLCONF_webserver_api_password: ""
+      # ...so its web server answers only Traefik (the published admin UI), Vaier and itself (#702).
+      FTLCONF_webserver_acl: "+127.0.0.1,+[::1],+172.20.0.251,+172.20.0.252"
     volumes:
       - ./pihole/etc-pihole:/etc/pihole
       - ./pihole/etc-dnsmasq.d:/etc/dnsmasq.d
@@ -633,6 +673,7 @@ services:
   # rotation strategy) so it can't grow unbounded now that it's written to a file for CrowdSec.
   traefik-logrotate:
     image: alpine:3.24
+    logging: *container-log
     container_name: traefik-logrotate
     mem_limit: 32m
     volumes:
@@ -671,6 +712,7 @@ services:
   # come back without any extra rule.
   host-lan-routes:
     image: lscr.io/linuxserver/wireguard:1.0.20260223-r0-ls126
+    logging: *container-log
     container_name: host-lan-routes
     mem_limit: 64m
     network_mode: host
@@ -711,6 +753,7 @@ services:
 
   geoip-init:
     image: alpine:3.24
+    logging: *container-log
     container_name: geoip-init
     command:
       - sh
@@ -753,6 +796,7 @@ services:
 
   vaier-init:
     image: busybox:1.37.0
+    logging: *container-log
     container_name: vaier-init
     command:
       - sh
@@ -826,6 +870,7 @@ services:
 
   vaier:
     image: geireilertsen/vaier:latest
+    logging: *container-log
     container_name: vaier
     # The JVM sizes its heap from the cgroup limit once one exists, so this cap and
     # JAVA_TOOL_OPTIONS below must be read together: 55% of 768m is a ~422 MB heap,
@@ -876,6 +921,8 @@ services:
       # Seeds/keeps this identity as an admin AccessEntry so the console is never locked out
       # (self-heal in AccessFileAdapter, read via System.getenv). Must reach the container (#305).
       VAIER_ADMIN_EMAIL: ${VAIER_ADMIN_EMAIL:-}
+      # The survival kit's config key, for a recovery whose vaier/config/vault.key is missing.
+      VAIER_VAULT_KEY: ${VAIER_VAULT_KEY:-}
       WIREGUARD_CONFIG_PATH: /wireguard/config
       WIREGUARD_CONTAINER_NAME: wireguard
       TRAEFIK_CONFIG_PATH: /traefik/config
@@ -907,6 +954,16 @@ services:
       # allowlist here; crowdsec bind-mounts the same file read-only into its parsers stage.
       - ./crowdsec/whitelist:/crowdsec-whitelist
     restart: unless-stopped
+    # A hung JVM still counts as running, so restart: alone never notices it. While Vaier is unhealthy (or
+    # still starting), Traefik drops its routers and the vaier-offline router answers instead. Docker does not
+    # restart an unhealthy container; the alive ping in Settings is what tells the operator.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "--max-time", "10", "http://localhost:8080/styles.css"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 180s
+      start_interval: 5s
     labels:
       - traefik.enable=true
       # Tier 1 — PUBLIC router (no auth): serves the viewer-adaptive launchpad SHELL and its assets
@@ -995,7 +1052,8 @@ services:
       - traefik.http.middlewares.vaier-public-inflight.inflightreq.amount=100
       - traefik.http.middlewares.vaier-public-inflight.inflightreq.sourcecriterion.ipstrategy.depth=0
     networks:
-      - vaier-network
+      vaier-network:
+        ipv4_address: *vaier-bridge-ip
 
   # --- #305 social login: oauth2-proxy is the forward-auth gatekeeper; Vaier owns authorization
   # via /authz/verify. This is mandatory infrastructure — the sole auth gateway — so it always
@@ -1020,6 +1078,7 @@ services:
   # proxy can read them. Re-rendered on every start so a rotated secret/domain is picked up.
   oauth2-proxy-init:
     image: alpine:3.24
+    logging: *container-log
     container_name: oauth2-proxy-init
     environment:
       - VAIER_DOMAIN=${VAIER_DOMAIN:-}
@@ -1168,11 +1227,12 @@ services:
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+    logging: *container-log
     container_name: oauth2-proxy
     mem_limit: 96m
     command:
       # Flags kept as flags — not covered by alpha config, or conflicting with it.
-      - --cookie-secret=${VAIER_OAUTH2_COOKIE_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+      - --cookie-secret-file=/run/secrets/oauth2_cookie_secret
       - --cookie-domain=.${VAIER_DOMAIN}
       - --cookie-secure=true
       # Lax SameSite: defence-in-depth against cross-site use of the auth cookie (e.g. a WebSocket
@@ -1189,6 +1249,8 @@ services:
       # Provider (generic OIDC brokered by Dex), client id/secret, upstream, header injection (incl.
       # the name claim) and the bind address now come from the rendered alpha config — see oauth2-proxy-init.
       - --alpha-config=/oauth2/config/alpha.yaml
+    secrets:
+      - oauth2_cookie_secret
     volumes:
       - ./oauth2/config:/oauth2/config:ro
     depends_on:
@@ -1213,10 +1275,11 @@ services:
   # holds the sign-in, so the console's own is a redirect the operator does not see.
   oauth2-proxy-console:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+    logging: *container-log
     container_name: oauth2-proxy-console
     mem_limit: 96m
     command:
-      - --cookie-secret=${VAIER_OAUTH2_COOKIE_SECRET:?not in .env — re-run install.sh to generate it (it only appends what is missing and never overwrites a value you set)}
+      - --cookie-secret-file=/run/secrets/oauth2_cookie_secret
       - --cookie-name=_vaier_console
       - --cookie-secure=true
       - --cookie-samesite=lax
@@ -1227,6 +1290,8 @@ services:
       - --redirect-url=https://vaier.${VAIER_DOMAIN}/oauth2/callback
       - --custom-templates-dir=/oauth2/config/templates
       - --alpha-config=/oauth2/config/alpha.yaml
+    secrets:
+      - oauth2_cookie_secret
     volumes:
       - ./oauth2/config:/oauth2/config:ro
     depends_on:
@@ -1281,6 +1346,7 @@ services:
   # file and re-runs this container through docker-proxy — the only start it permits).
   dex-init:
     image: alpine:3.24
+    logging: *container-log
     container_name: dex-init
     environment:
       - VAIER_DOMAIN=${VAIER_DOMAIN:-}
@@ -1425,6 +1491,7 @@ services:
 
   dex:
     image: ghcr.io/dexidp/dex:v2.46.0
+    logging: *container-log
     container_name: dex
     mem_limit: 96m
     command: [dex, serve, /dex/config/config.yaml]
@@ -1453,6 +1520,7 @@ services:
   # the vaier container so the branded offline page is still reachable while Vaier is unavailable.
   vaier-offline:
     image: nginx:1.30.6-alpine
+    logging: *container-log
     container_name: vaier-offline
     mem_limit: 32m
     restart: unless-stopped

@@ -330,8 +330,8 @@ ${dns_step}  - Start the stack — ${ds}docker compose up -d
   - Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin.
 
-Upgrading an existing install? Steps 1 and 2 are already done — bring it up:
-  ${ds}docker compose up -d && ${ds}docker rm -f wireguard-masquerade 2>/dev/null
+Upgrading an existing install? Steps 1 and 2 are already done — pull the new images and bring it up:
+  ${ds}docker compose pull && ${ds}docker compose up -d && ${ds}docker rm -f wireguard-masquerade 2>/dev/null
 EOF
 else
   cat <<EOF

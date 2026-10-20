@@ -46,14 +46,9 @@ Then give Vaier the client id and secret, one of two ways:
 - **From People → Sign-in providers.** The section shows the redirect URI with a copy button, a link to each provider's console, and the id and secret fields. **Save** applies it in a few seconds; once set, it folds to one line with **Change**. If it fails, the working config stays and the error shows under the button. The secret is write-only and is stored in `./vaier/config/sign-in-providers.env` (mode `0600`).
 - **From `.env`.** Set `VAIER_OIDC_GOOGLE_CLIENT_ID` / `VAIER_OIDC_GOOGLE_CLIENT_SECRET` and/or `VAIER_OIDC_GITHUB_CLIENT_ID` / `VAIER_OIDC_GITHUB_CLIENT_SECRET` and run `docker compose up -d`. **`.env` wins**: People then shows that provider read-only as *set in .env*.
 
-`install.sh` generates three secrets into `.env` for you: `VAIER_OAUTH2_COOKIE_SECRET`, `VAIER_DEX_CLIENT_SECRET` and `VAIER_CROWDSEC_BOUNCER_KEY`. If you hand-write `.env`, generate all three — a missing one stops `docker compose` with a message naming it. Re-running `install.sh` in place is simpler: it tops up what is missing and never overwrites a value.
+`install.sh` generates the stack's own secrets into `.env` for you. Missing one? `docker compose` stops with a message naming it: re-run the installer in the `vaier` folder. It adds what is missing and never overwrites a value.
 
-```bash
-printf 'VAIER_DEX_CLIENT_SECRET=%s\nVAIER_OAUTH2_COOKIE_SECRET=%s\nVAIER_CROWDSEC_BOUNCER_KEY=%s\n' \
-  "$(openssl rand -hex 32)" "$(openssl rand -base64 32 | tr '+/' '-_')" "$(openssl rand -hex 32)" >> .env
-```
-
-Once `docker compose ps` shows every service `Up`, open `https://vaier.yourdomain.com` and sign in as `VAIER_ADMIN_EMAIL`, who becomes the first admin. Anyone else lands as **pending** until you let them in from **People**.
+Once `docker compose ps` shows every service `Up`, open `https://vaier.yourdomain.com` and sign in with the new provider under the first-run account's email (see *Handing over* above), so you stay the admin. Anyone else lands as **pending** until you let them in from **People**.
 
 A CrowdSec ban on your own address does not stop you signing in: the console is one of the [recovery doors](NETWORKING.md#the-recovery-doors), so you can reach the Security view and lift the block.
 
@@ -67,7 +62,7 @@ Manage who can sign in from **People** in the navigation bar. Each identity — 
 - **Let in** — everyone with access, admins first, then users. The **…** menu offers **Make an admin** / **Make a user**, **Change groups** and **Remove access**. **Add a person** lets someone in before their first sign-in.
 - **Sign-in providers** — Google and GitHub (above).
 
-A first-time sign-in mails every admin (if SMTP is configured). **Turn away** and **Remove access** stick: that person is kept out quietly — they never wait in People again and no admin is mailed when they try. To let them in later, use **Add a person** with their address.
+A first-time sign-in mails every admin (if SMTP is configured), at most once every ten minutes; a later mail says how many are waiting. At most 25 people wait at once — past that, a newcomer is turned back without being kept, so use **Add a person** for someone you expect. **Turn away** and **Remove access** stick: that person is kept out quietly — they never wait in People again and no admin is mailed when they try. To let them in later, use **Add a person** with their address.
 
 - Admins reach everything; pending identities reach nothing.
 - **Access groups** (e.g. `devs`, `family`) gate individual services.

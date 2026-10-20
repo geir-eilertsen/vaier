@@ -15,7 +15,8 @@ Admins are mailed (Settings → *Mail*) when:
 - a server-type machine goes up or down
 - a filesystem fills past its threshold
 - a machine has [no default route](#a-machine-with-no-way-out)
-- a container that was running [stops, turns unhealthy or restart-loops](#a-container-that-was-running-and-is-not)
+- a container that was running [stops, turns unhealthy or restart-loops](#a-container-that-was-running-and-is-not), Vaier's own included
+- a [pre-flight](#pre-flight) check starts failing, and once it is all working again
 - an image newly has an **update available**
 - a first sign-in lands as a pending access request
 - the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
@@ -24,21 +25,11 @@ Each alert is one mail when trouble starts and one when it ends. Vaier remembers
 
 Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) sends no up/down or backup mail, and its nightly backup is skipped.
 
-### Sending through Gmail
+### Setting up mail
 
-1. Turn on **2-Step Verification** for the Google account, at myaccount.google.com/security. Google offers app passwords only once it is on.
-2. Create an **app password** at myaccount.google.com/apppasswords (name it "Vaier") and copy the 16 letters it shows. A Google Workspace admin may have switched app passwords off for the domain.
-3. In Vaier, **Settings → Mail → Change**:
+In **Settings → Mail**, type the **Email** address to send from and its **App password**. For Gmail, Yahoo, iCloud and Fastmail addresses Vaier fills in the mail server itself and links the page that makes an app password; for any other provider, fill in **Another mail provider**. Mail goes out as that address unless you set **Send as**. **Save** checks the login and sends a test to **Send a test to** — your own address unless you change it. A failed save says why; `535` means the address or app password is wrong.
 
-   | Field | Value |
-   |---|---|
-   | Host | `smtp.gmail.com` |
-   | Port | `587` (or `465`; Vaier never sends your password unencrypted) |
-   | Username | your full Gmail address |
-   | Password | the app password, spaces or not — never your Google password |
-   | Sender | the same Gmail address (Gmail replaces any other) |
-
-4. Type your address as the test recipient and press **Send test email**. A failed test says why; `535` means the username or app password is wrong.
+For Gmail, turn on **2-Step Verification** first (myaccount.google.com/security): Google offers app passwords only once it is on, and a Google Workspace admin may have switched them off for the domain. Gmail always sends as the account's own address.
 
 Later, a blank password keeps the stored one — but only for the same host and username. Change either and type the password again.
 
@@ -71,13 +62,13 @@ A machine that has lost its default route still serves local traffic and passes 
 
 The five-minute rounds read each machine's **default-route standing**: **present**, **absent** (the fault), or **unknown**. **Unknown is not "no"**, and shows nothing.
 
-When the route is absent, the machine's pane shows a "No default route" card under *What to do next*. It has no button: **Vaier can see this but cannot fix it**. You get one mail when the route goes and one when it comes back.
+When the route is absent, the machine's pane says it "can't reach the internet" under *What to do next*. It has no button: **Vaier can see this but cannot fix it** — the fix is on the machine's network, often a router or cable. You get one mail when the route goes and one when it comes back.
 
 ---
 
 ## A container that was running and is not
 
-Vaier scrapes every machine's containers every 30 seconds. It speaks only about a container it has seen running well — containers stopped on purpose stay quiet. Stopped containers are listed reading **DOWN**.
+Vaier scrapes every machine's containers every 30 seconds. It speaks only about a container it has seen running well — containers stopped on purpose stay quiet. Stopped containers are listed reading **DOWN**. On the Vaier server that includes Vaier's own stack — Traefik, WireGuard, CrowdSec, Dex, oauth2-proxy, Pi-hole and the rest — though not the init containers that run once at start-up.
 
 Three kinds of trouble, worst first:
 
@@ -115,7 +106,7 @@ No button for a container started by hand, one in Vaier's own stack, or one on a
 
 **Settings → Update Vaier** updates the whole of Vaier's own stack, compose file included, then runs `docker compose up -d`. If the stack doesn't come up, or Vaier doesn't answer within two minutes, it rolls back and Settings says so. A step that stalls for many minutes (a hung pull or download) ends the update the same way. The log is in `~/.vaier-upgrade/last-update.log` on the Vaier server.
 
-It never touches your `.env` values or runtime folders (`vaier/config`, `wireguard/config`, `traefik/acme`, …), and it doesn't remove orphan containers. The first update onto this version is image-only.
+It never touches your `.env` values or runtime folders (`vaier/config`, `wireguard/config`, `traefik/acme`, …), and it doesn't remove orphan containers.
 
 ---
 
@@ -129,7 +120,16 @@ The **reverse proxy audit** reads back the Traefik config Vaier writes (`remote-
 
 ## Pre-flight
 
-The one place that answers **"is this thing working?"** It checks the wildcard DNS record, the certificate (missing or under a fortnight left), WireGuard, and the server's own disk. Only a failing check appears, in **Needs you**, saying what is wrong and what to do. **A healthy check paints nothing.**
+The one place that answers **"is this thing working?"** It checks the wildcard DNS record, the certificate (missing or under a fortnight left), WireGuard, CrowdSec, and the server's own disk. Only a failing check appears, in **Needs you**, saying what is wrong and what to do. **A healthy check paints nothing.**
+
+Vaier also runs it every five minutes and mails you when a check has failed twice running — so a certificate that stopped renewing reaches you before browsers start warning — and once more when everything it mailed about works again. The server's own disk is left to the [disk alert](#host-disk-monitoring).
+
+## When Vaier itself stops
+
+Vaier cannot mail you about its own death, so two things cover it:
+
+- **A health check.** Docker asks Vaier every 30 seconds whether it answers. A Vaier that hangs shows as `unhealthy` in `docker compose ps`, and the console shows the offline page until it answers again. Docker does not restart it for you: `docker compose restart vaier` does.
+- **Alive ping** (Settings → *Alive ping*, off by default). Paste a ping URL from an outside monitor such as healthchecks.io; Vaier opens it every five minutes, and the monitor alerts you when the pings stop. Set the monitor's grace to 15 minutes or more so a deploy does not page you.
 
 ---
 

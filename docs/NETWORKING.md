@@ -26,7 +26,7 @@ Every published service resolves to the Vaier server through your one `*.yourdom
 
 ## Adding a VPN peer
 
-In the **Explorer**, choose **Add a machine**. It asks what you are adding and generates the rest (address, keys, config):
+In the **Explorer**, choose **Add machine**. It asks what you are adding and generates the rest (address, keys, config):
 
 - **A server or PC that should join** — give it a **name**, then run the one-line setup shown in the **handoff**.
 - **A phone or computer I carry** — an Android phone or Windows PC joins through the **Vaier app**. See [Enrolment from the Vaier app](#enrolment-from-the-vaier-app).
@@ -37,14 +37,14 @@ In the **Explorer**, choose **Add a machine**. It asks what you are adding and g
 | A server | VPN subnet only | A **setup link**: paste one `curl -fsSL '…/vpn/peers/<id>/setup?t=<token>' \| bash` line. It runs WireGuard in a container, and asks for your password once to install Docker and the tunnel. The link is single-use and expires after about 15 minutes |
 | An Android phone or Windows PC | All traffic | The Vaier app and a join code — Vaier makes no config |
 
-The handoff turns green on the first handshake. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it. A relay only passes that network on once its setup has run with it, so routing, changing or clearing a relay's LAN marks its setup out of date: **Update its setup** (or download it and run it on the relay) to finish.
+The handoff turns green on the first handshake. A new server that never does usually means UDP 51820 is closed in the Vaier server's firewall. Set a server's routed LAN later from its pane; Vaier reads the network and asks only whether the fleet should reach it. A relay only passes that network on once its setup has run with it, so routing, changing or clearing a relay's LAN marks its setup out of date: **Update its setup** (or download it and run it on the relay) to finish.
 
 Things worth knowing:
 
 - **A full-tunnel client can't reach the LAN it is sitting on.** Its kill-switch drops that traffic. At home you don't need the tunnel for it; away, the same address works through the tunnel.
 - **Setup scripts refuse to run on the wrong machine** — for example a Vaier server, or a host that would lose its own uplink. A machine is a peer *or* a LAN server, never both. Re-run with `VAIER_FORCE=1` if you truly mean it.
 - **A server finds Vaier again by itself** when your Vaier server's public address changes — within a few minutes, no power cycle. A machine set up before it learned this says **its setup is out of date**: **Update its setup** once, *while the current address still works*.
-- **Re-running a setup on a working machine is safe** — run it as the user that first set it up, usually `sudo bash setup-<machine>.sh`. If the run fails, it puts back the tunnel the machine had; it also carries on if the terminal you ran it from drops when the old tunnel stops.
+- **Re-running a setup on a working machine is safe**, usually `sudo bash setup-<machine>.sh`: it finds the install wherever the machine was first set up, and leaves its files with their owner. If the run fails, it puts back the tunnel the machine had; it also carries on if the terminal you ran it from drops when the old tunnel stops. It leaves Docker's own settings alone, including an `override.conf` from `systemctl edit docker`.
 
 ### Site-to-site routing
 
@@ -63,9 +63,9 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 
 A server peer's config is shown **exactly once**, at creation. Save what you need before closing the modal. For a fresh one, the machine's **Sign-in, details and removal** fold offers:
 
-- **Update its setup** — keeps the keypair and puts the new setup on the machine itself, where Vaier can sign in to it. It runs at once if Vaier can become root there without a password; otherwise the pane shows the one `sudo bash` line to type in its shell. The tunnel drops for a few seconds while it runs.
-- **Download its setup again** (Reissue) — the same setup as a file. Offered instead of **Update its setup** when Vaier has no sign-in for the machine or its tunnel is down — then run it there, or use its setup link.
-- **Give it new keys** (Regenerate), under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
+- **Update its setup** — keeps the keypair and puts the new setup on the machine itself. It runs at once if Vaier can become root there without a password; otherwise **Run it in ‹machine›'s shell** opens its shell with the one `sudo bash` line typed: press Enter, and **Send password** if sudo asks. The tunnel drops for a few seconds while it runs, and Vaier says when it is done: back on its new setup, or kept its old one. The setup stays out of date until the machine is on the new one.
+- **Download its setup again** — the same setup as a file. Offered instead of **Update its setup** when Vaier has no sign-in for the machine, its tunnel is down, or Vaier has not checked its SSH key yet (opening its shell once does) — then run it there, or use its setup link.
+- **Give it new keys**, under **Give it new keys or remove it** — rotates the keypair; the old config stops working at once. The machine keeps its address, published services, login and backups.
 
 ### Enrolment from the Vaier app
 
@@ -98,9 +98,9 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 2. Pick **where it is** (**At <name>**) and Vaier scans that LAN.
 3. Pick a host and type a name. If it speaks SSH, attach and **test** a credential.
 
-The scan leaves out machines already in the fleet, the Vaier server and the relays themselves among them. A relay counts once Vaier can sign in to it and has read its address. If the scan finds nothing, use **Add by address instead**. An address another machine already has is refused — remove or fix that one first.
+The scan leaves out machines already in the fleet, the Vaier server and the relays themselves among them. A relay counts once Vaier can sign in to it and has read its address. If the scan finds nothing, use **Add by address instead**. An address on a network your fleet doesn't reach yet is refused as soon as you leave the field, naming the machine whose network it is on when Vaier knows one — route that network from its page first. An address another machine already has is refused — remove or fix that one first.
 
-Then run the machine's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run.
+Then run the machine's single-use **setup link** with `sudo`. It opens the Docker API to the fleet only and adds routes to the rest of your network. It is safe to re-run. Where Vaier can sign in there, **Run it in ‹machine›'s shell** types it in its shell for you.
 
 A peer that is the only way to reach some LAN servers can't be removed, or have its network changed to one that leaves them out, until those LAN servers are removed.
 
@@ -114,7 +114,7 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 
 1. Start a Docker container on any connected peer.
 2. In the **Explorer**, open the peer's services; the container shows under **Ready to publish**.
-3. Press **Publish**, enter a subdomain, and optionally require a login.
+3. Press **Publish**, give it an address — the dialog shows the whole web address as you type — and choose **Who can open it**.
 4. Vaier writes the route and waits for Traefik to accept it. There is no DNS step.
 
 The service is live at `https://subdomain.yourdomain.com`. If Traefik refuses the route, or never loads it, Vaier removes it again.
@@ -123,7 +123,7 @@ A name too close to an existing one is refused: `printer-cabin` beside `printer.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a row from **Ready to publish**.
-- **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page.
+- **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page. Vaier asks the port itself whether it speaks http or https, so it must be answering when you publish.
 - On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
 
 For who can open a service, see [`docs/AUTH.md`](AUTH.md).
@@ -139,7 +139,7 @@ bmp.yourdomain.com/auth/*  →  http://rig.yourdomain.com:8090/auth/*
 
 ### Publishing a port that is not a website
 
-Choose **raw TCP** instead of **website** to publish a **stream**: clients connect over TLS to e.g. `mqtt.example.com:443`. The port you enter is the backend port. A stream takes its whole name, so it can't share a subdomain with website routes.
+Choose **raw TCP** instead of **website** to publish a **stream** (Vaier picks it for you on MQTT's ports): clients connect over TLS to e.g. `mqtt.example.com:443`. The port you enter is the backend port. A stream takes its whole name, so it can't share a subdomain with website routes.
 
 **A stream cannot be put behind a login, and CrowdSec does not watch it.** Publish one only for a service whose own password you trust. If the client can't speak TLS, reach the service over the VPN at its LAN address instead.
 

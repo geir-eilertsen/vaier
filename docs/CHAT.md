@@ -2,7 +2,7 @@
 
 Back to [README](../README.md).
 
-A pane in the Explorer — ask about your fleet in plain sentences and the answer streams back, built from Vaier's own facts and, when a question needs it, a page off the public internet. Paste your own Anthropic API key under **Settings** and **Chat** appears in the topbar's **Vaier** menu. Reading never carries a key, a credential or a token, and nothing changes without your click.
+A pane in the Explorer — ask about your fleet in plain sentences and the answer streams back, built from Vaier's own facts and, when a question needs it, a page off the public internet. Paste your own Anthropic API key under **Settings** and **Chat** appears in the navigation bar. Reading never carries a key, a credential or a token, and nothing changes without your click.
 
 ![The Chat pane, where Marvin waits for a question](vaier-chat.jpg)
 

@@ -22,13 +22,13 @@
 | **Explorer** | Files, containers, disks and backups across every machine in one place, opening on what needs you. → [Explorer](docs/EXPLORER.md) |
 | **Map & Topology** | Your sites and tunnels on a map, or as one picture. Nobody is tracked. → [Explorer](docs/EXPLORER.md#topology) |
 | **Web terminal** | A persistent SSH shell to any machine in the browser; credentials stay on the server. → [Explorer](docs/EXPLORER.md#web-terminal) |
-| **Backups** | Tick what matters and press **Back up**; archives stay readable even without Vaier. → [Backup](docs/BACKUP.md) |
-| **Alerts** | Disk forecasts, stopped containers, image and OS updates — mail only when something is wrong. → [Monitoring](docs/MONITORING.md) |
+| **Backups** | Pick a backup server, then tick what matters and press **Back up**; archives stay readable even without Vaier. → [Backup](docs/BACKUP.md) |
+| **Alerts** | Disk forecasts, stopped containers, failing certificates, image and OS updates — mail only when something is wrong, and an optional outside ping for when Vaier itself stops. → [Monitoring](docs/MONITORING.md) |
 | **Chat** | Ask Marvin about your fleet in plain words; he acts only on your click. → [Chat](docs/CHAT.md) |
 
 ## Quick start
 
-You need an x86-64 (amd64) Linux server with a public IP (a t3.small is plenty), TCP 22, 80, 443 and UDP 51820 open, and a domain you control.
+You need an x86-64 (amd64) Linux server with a public IP (any small VPS with 2 GB of RAM will do), TCP 22, 80, 443 and UDP 51820 open, and a domain you control.
 
 **1. Run the installer** on the server — no git clone:
 
@@ -47,7 +47,7 @@ Then add your machines from the **Explorer**. Installer details and running with
 
 ## Updating
 
-Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. Updating by hand is `docker compose up -d`. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
+Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. To update by hand, re-run the installer, then `docker compose pull && docker compose up -d`. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
 
 ## Removing Vaier
 

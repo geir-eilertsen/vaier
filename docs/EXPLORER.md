@@ -25,6 +25,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 - an alert mail that did not go out (**Check mail**);
 - a Vaier update that failed or rolled back;
 - a server not answering (**I switched it off**, see below) — phones and laptops that are away are never listed;
+- a server that hasn't connected yet, because its setup hasn't run on it (**Show its setup**, or **Update its setup** where Vaier can sign in);
 - a backup that went wrong (**Open its backup**, **Get this machine ready**, or **Back up as root**);
 - a disk past or near its threshold (**Open its disk**);
 - security updates waiting (**Install OS updates**);
@@ -58,9 +59,9 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 | **Storage** | `disk` | "60% full" |
 | **Backups** | `backup` | "Backed up last night", "Paused — switched off" |
 
-A door is greyed, with the reason on hover, when Vaier can't sign in. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
+A door is greyed, with the reason on hover, when Vaier can't sign in or the machine isn't answering. If a read fails, the page says why in plain words, with **Change sign-in** when the machine turned Vaier's sign-in down. Turning on **Let Vaier sign in to this machine** asks for the sign-in straight away. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, **Stop Vaier signing in here**), addresses, **Edit details**, **Update its setup**, **Download its setup again**, and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
+Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, and **Stop Vaier signing in here**, which asks first — it also stops backups, disk watching, updates and files there), addresses, **Edit details**, the machine's setup (**Update its setup** where Vaier can sign in to it, otherwise **Download its setup again**), and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
@@ -178,7 +179,7 @@ The **Shell** door opens a real SSH shell to the machine, the **Vaier server** i
 - **Send password** types the stored password into a `sudo` prompt without the browser seeing it.
 - On a phone a **key bar** gives **Esc**, **Tab**, arrows and sticky **Ctrl**/**Alt**.
 
-Credentials stay on the server. If a machine's SSH key changes, Vaier refuses to connect: Shell, Files and Storage grey out, and **Needs you** says so with both fingerprints and **Clear pinned key**. Check the new fingerprint on the machine before you clear it.
+Credentials stay on the server. If a machine's SSH key changes, Vaier refuses to connect: Shell, Files and Storage grey out, and **Needs you** says the machine doesn't look like the one Vaier knows. A reinstall is the usual cause; press **I reinstalled it**, compare the two fingerprints and type the machine's name. If you didn't change it, leave it: something may be pretending to be it.
 
 ### Copy, paste and scroll inside a shell
 

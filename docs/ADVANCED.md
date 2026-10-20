@@ -22,7 +22,7 @@ Configuration and workflows beyond the basic Quick Start. If you're just getting
 
 Sign-in providers and mail are set later in the console — Google or GitHub under **People → Sign-in providers** ([AUTH](AUTH.md#registering-google-or-github)), mail under **Settings**.
 
-**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Updating by hand instead is `docker compose up -d`; on an install from before 1.2, also run `docker rm -f wireguard-masquerade` once.
+**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Answer no and it only refreshes the files; `docker compose pull && docker compose up -d` then updates by hand.
 
 The commands it prints carry `sudo` when your user is not in the `docker` group.
 
@@ -57,13 +57,10 @@ The commands it prints carry `sudo` when your user is not in the `docker` group.
 | `VAIER_OAUTH2_COOKIE_SECRET` | Auto | oauth2-proxy session cookie secret |
 | `VAIER_DEX_CLIENT_SECRET` | Auto | oauth2-proxy↔Dex shared secret |
 | `VAIER_CROWDSEC_BOUNCER_KEY` | Auto | CrowdSec bouncer API key |
+| `VAIER_VAULT_KEY` | No | The survival kit's config key, for a recovery whose `vaier/config/vault.key` is missing |
 | `VAIER_PUBLIC_HOST` | No | Public hostname, when not on EC2 |
 | `VAIER_PUBLIC_IP` | No | Public IPv4, what `*.<domain>` should resolve to; the installer fills it in |
 | `VAIER_SERVER_LAN_CIDR` | No | The server's own LAN, for LAN servers with no relay peer (see below) |
-| `WIREGUARD_CONFIG_PATH` | No | WireGuard config dir (default: `/wireguard/config`) |
-| `WIREGUARD_CONTAINER_NAME` | No | WireGuard container name (default: `wireguard`) |
-| `TRAEFIK_CONFIG_PATH` | No | Traefik dynamic config dir (default: `/traefik/config`) |
-| `TRAEFIK_API_URL` | No | Traefik API URL (default: `http://traefik:8080`) |
 
 "Auto" secrets are generated into `.env` for you. A provider is offered only when both its client id and secret are set; its redirect URI is `https://dex.<domain>/callback`. With no provider, Vaier opens the [first-run door](AUTH.md#the-first-run-password-before-you-have-registered-anything) instead.
 
@@ -75,7 +72,7 @@ Vaier answers only what comes through Traefik, where sign-in is checked. Another
 
 ## Secrets on disk
 
-Vaier writes new secret files at mode `600`. On an older deployment, tighten existing files too:
+Vaier writes its secret files at mode `600`. Keep `.env` at mode `600` too, and the folders closed to other users:
 
 ```bash
 chmod 600 .env
@@ -84,11 +81,13 @@ chmod -R go-rwx vaier/ oauth2/ wireguard/ traefik/
 
 | File | Contents |
 |------|----------|
-| `vaier/config/vaier-config.yml` | Domain, SMTP settings **and the SMTP password** — owner-only |
+| `vaier/config/vault.key` | The key that unlocks every stored password and passphrase. Lose it and they are unreadable, unless a written survival kit gives it back; a copy of it together with the config folder exposes them all |
+| `vaier/config/vaier-config.yml` | Domain, SMTP settings **and the SMTP password** |
+| `vaier/config/host-credentials.yml` | How Vaier signs in to each machine: SSH passwords and keys |
+| `vaier/config/service-credentials.yml` | The sign-ins Vaier stores for published services |
+| `vaier/config/first-run-password` | The first-run sign-in's email and password |
 | `vaier/config/access.yml` | Access store — the known identities, their roles and access groups |
-| `oauth2/config/client-secret` | Google OAuth client secret |
-
-Keep `.env` at mode `600`.
+| `oauth2/config/client-secret` | The secret oauth2-proxy and Dex share |
 
 ---
 
@@ -97,7 +96,7 @@ Keep `.env` at mode `600`.
 A *LAN server* is any machine that isn't itself a VPN peer — a NAS, a printer, IPMI, an extra Docker host — on a relay peer's LAN or **in the Vaier server's own subnet** (an AWS VPC, say). Register it once, then publish its services.
 
 1. Make sure its address is covered by something Vaier routes to:
-   - **Behind a relay peer:** Vaier offers the peer's network on that machine's page — "Cabin sits on 192.168.10.0/24" — usually one click. For a network it can't see, set it under **The network behind this machine** in the machine's edit form.
+   - **Behind a relay peer:** Vaier offers the peer's network on that machine's page — "Reach the rest of Cabin's home network?" — usually one click on **Reach it**. For a network it can't see, set it under **The network behind this machine** in the machine's edit form.
    - **In the Vaier server's own subnet:** on EC2 the subnet is auto-detected. To cover the whole VPC (e.g. `172.31.0.0/16`), or off EC2, set `VAIER_SERVER_LAN_CIDR`. Allow inbound from the Vaier server in the machine's security group or firewall.
 2. Add it: **Add a machine** → *Something already on one of my networks* (or **Add by address instead**), with Docker on or off.
 3. Run its single-use **setup link** with `sudo` on the machine. With Docker on, it opens the Docker API on TCP 2375 to the fleet only (no TLS), and it adds the routes back to the rest of your network.
