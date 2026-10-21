@@ -341,7 +341,7 @@ services:
             # a fleet-wide default: a published app may legitimately embed or be embedded, and Vaier
             # generates those routers, so a bad default would break them silently and at scale.
             # SAMEORIGIN rather than DENY because the Explorer frames its own pages same-origin (the
-            # Users/Concepts bridge in explorer-shell.js) — DENY would blank those panes.
+            # Users/Concepts bridge in explorer/main.js) — DENY would blank those panes.
             vaier-frame-guard:
               headers:
                 customFrameOptionsValue: SAMEORIGIN
