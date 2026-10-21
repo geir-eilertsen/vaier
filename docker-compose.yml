@@ -1055,6 +1055,62 @@ services:
       vaier-network:
         ipv4_address: *vaier-bridge-ip
 
+  # #715: the SHELL GATEWAY — the web terminal on its own at shell.<domain>, so a shell still opens while Vaier
+  # is down, crash-looping or being recreated. Same image, a second main class that builds only the shell: no
+  # schedulers, no Docker client (so no docker-proxy), no Traefik API.
+  #
+  # It lives in wireguard's network namespace, so it reaches every peer and relay LAN through wg0 and the
+  # routes wireguard already carries, with nothing of its own to install. Traefik finds it at wireguard's
+  # address; it listens there only, on a port nothing else in that namespace uses, so neither loopback nor a
+  # tunnel address reaches it. Recreating wireguard strands it in a dead namespace: recreate it after.
+  #
+  # Behind a profile, so `docker compose up -d` — a deploy, a self-update, install.sh's upgrade — never
+  # recreates it: it is updated on purpose, with `docker compose up -d vaier-shell`. No depends_on vaier.
+  vaier-shell:
+    image: geireilertsen/vaier:latest
+    logging: *container-log
+    container_name: vaier-shell
+    profiles: [shell-gateway]
+    mem_limit: 320m
+    # The way back in when Vaier is broken; earlyoom must not pick it before an idle agent (see vaier above).
+    oom_score_adj: -900
+    network_mode: "service:wireguard"
+    user: "1000:1000"
+    entrypoint: ["/opt/java/openjdk/bin/java", "-Xmx128m", "-Dloader.main=net.vaier.ShellGatewayApplication",
+                 "-cp", "/app/app.jar", "org.springframework.boot.loader.launch.PropertiesLauncher"]
+    environment:
+      TZ: ${VAIER_TZ:-UTC}
+      VAIER_DOMAIN: ${VAIER_DOMAIN:?not set in .env — your base domain, e.g. example.com}
+      VAIER_VAULT_KEY: ${VAIER_VAULT_KEY:-}
+      VAIER_CONFIG_PATH: /vaier/config
+      WIREGUARD_CONFIG_PATH: /wireguard/config
+      SERVER_ADDRESS: *wireguard-bridge-ip
+      SERVER_PORT: "8701"
+    volumes:
+      - ./wireguard/config:/wireguard/config:ro
+      # Read-write for one file only: the host-key pin a first connect writes (ssh-known-hosts.yml).
+      - ./vaier/config:/vaier/config
+    restart: unless-stopped
+    # From its own address it is not Traefik, so the gateway refuses it: a 403 is the answer of a live JVM.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://172.20.0.250:8701/styles.css | grep -q 403"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
+    labels:
+      - traefik.enable=true
+      # Signed in by its own proxy (oauth2-proxy-shell), then admin-checked inside the gateway from access.yml:
+      # no vaier-authz, which would ask Vaier.
+      - traefik.http.routers.vaier-shell.rule=Host(`shell.${VAIER_DOMAIN}`)
+      - traefik.http.routers.vaier-shell.entrypoints=websecure
+      - traefik.http.routers.vaier-shell.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-shell.priority=100
+      - traefik.http.routers.vaier-shell.service=vaier-shell
+      - traefik.http.routers.vaier-shell.middlewares=crowdsec-bouncer@file,vaier-shell-signin@docker,vaier-shell-authn@docker,vaier-frame-guard@file
+      - traefik.http.services.vaier-shell.loadbalancer.server.port=8701
+
   # --- #305 social login: oauth2-proxy is the forward-auth gatekeeper; Vaier owns authorization
   # via /authz/verify. This is mandatory infrastructure — the sole auth gateway — so it always
   # starts with `docker compose up -d` (no `social` profile). oauth2-proxy no longer talks to Google
@@ -1319,6 +1375,52 @@ services:
     networks:
       - vaier-network
 
+  # #715: the shell gateway's sign-in, the console's twin on shell.<domain>. The console's proxy cannot serve a
+  # second host: its cookie names no domain, so it never reaches shell.<domain>, and its callback is fixed to
+  # vaier.<domain>. Same Dex client and rendered config, its own host-only cookie — so, as for the console, no
+  # published app ever receives this session.
+  oauth2-proxy-shell:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+    logging: *container-log
+    container_name: oauth2-proxy-shell
+    mem_limit: 96m
+    command:
+      - --cookie-secret-file=/run/secrets/oauth2_cookie_secret
+      - --cookie-name=_vaier_shell
+      - --cookie-secure=true
+      - --cookie-samesite=lax
+      - --whitelist-domain=.${VAIER_DOMAIN}
+      - --email-domain=*
+      - --reverse-proxy=true
+      - --redirect-url=https://shell.${VAIER_DOMAIN}/oauth2/callback
+      - --custom-templates-dir=/oauth2/config/templates
+      - --alpha-config=/oauth2/config/alpha.yaml
+    secrets:
+      - oauth2_cookie_secret
+    volumes:
+      - ./oauth2/config:/oauth2/config:ro
+    depends_on:
+      oauth2-proxy-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vaier-shell-oauth2.rule=Host(`shell.${VAIER_DOMAIN}`) && PathPrefix(`/oauth2/`)
+      - traefik.http.routers.vaier-shell-oauth2.entrypoints=websecure
+      - traefik.http.routers.vaier-shell-oauth2.tls.certresolver=letsencrypt
+      - traefik.http.routers.vaier-shell-oauth2.priority=300
+      - traefik.http.routers.vaier-shell-oauth2.service=oauth2-proxy-shell
+      - traefik.http.routers.vaier-shell-oauth2.middlewares=crowdsec-bouncer@file,vaier-frame-guard@file
+      - traefik.http.services.oauth2-proxy-shell.loadbalancer.server.port=4180
+      - traefik.http.middlewares.vaier-shell-signin.errors.status=401
+      - traefik.http.middlewares.vaier-shell-signin.errors.service=oauth2-proxy-shell
+      - traefik.http.middlewares.vaier-shell-signin.errors.query=/oauth2/sign_in?rd={url}
+      - traefik.http.middlewares.vaier-shell-authn.forwardauth.address=http://oauth2-proxy-shell:4180/oauth2/auth
+      - traefik.http.middlewares.vaier-shell-authn.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.vaier-shell-authn.forwardauth.authResponseHeaders=X-Auth-Request-Email,X-Auth-Request-User,X-Auth-Request-Name,X-Auth-Request-Connector,X-Auth-Request-Connector-Uid
+    networks:
+      - vaier-network
+
   # --- #305 follow-up: Dex OIDC broker. Sits behind oauth2-proxy and federates Google + GitHub, so
   # a user signs in with either provider while oauth2-proxy stays the single forward-auth gatekeeper
   # and identity stays keyed on email. Mandatory infrastructure — no `social` profile.
@@ -1423,7 +1525,7 @@ services:
         - id: vaier-oauth2
           name: Vaier
           secret: $${VAIER_DEX_CLIENT_SECRET}
-          redirectURIs: [https://oauth2.$${VAIER_DOMAIN}/oauth2/callback, https://vaier.$${VAIER_DOMAIN}/oauth2/callback]
+          redirectURIs: [https://oauth2.$${VAIER_DOMAIN}/oauth2/callback, https://vaier.$${VAIER_DOMAIN}/oauth2/callback, https://shell.$${VAIER_DOMAIN}/oauth2/callback]
         EOF
 
         # The first-run door: open while no provider exists, or while Settings hold it open because
@@ -1504,6 +1606,8 @@ services:
     depends_on:
       dex-init:
         condition: service_completed_successfully
+        # Dex reads its config once: an update that re-renders it must restart Dex, or a new redirect is refused.
+        restart: true
     restart: unless-stopped
     labels:
       - traefik.enable=true

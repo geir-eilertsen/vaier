@@ -290,6 +290,9 @@ if $interactive; then
         || die "The stack didn't start — see the output above."
       # Retired: an older install's sidecar would restart for ever in a namespace that no longer exists.
       "${docker_cmd[@]}" rm -f wireguard-masquerade >/dev/null 2>&1 || true
+      # The shell gateway sits outside `up -d` so nothing recreates it by accident; start it if it is missing.
+      "${docker_cmd[@]}" compose up -d --no-deps --no-recreate vaier-shell \
+        || warn "The shell at shell.$(env_value VAIER_DOMAIN) didn't start — see the output above."
       if ! $fresh; then say "Vaier is up to date."; exit 0; fi
       say "Waiting for Vaier to start (a minute or two the first time)…"
       first_sign_in='' started=0
@@ -326,7 +329,7 @@ if [ -n "$domain" ] && [ "$domain" != yourdomain.com ]; then
 
 $(say "Done.")
 Next:
-${dns_step}  - Start the stack — ${ds}docker compose up -d
+${dns_step}  - Start the stack — ${ds}docker compose up -d && ${ds}docker compose up -d vaier-shell
   - Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin.
 
@@ -341,7 +344,7 @@ Next:
   1. Edit .env       — set your domain and Let's Encrypt email; nothing else is required.
                        (every auto-generated secret is already filled in for you.)
   2. Point DNS       — one record, once:  *.<domain>  A  <this server's public IP>
-  3. Start the stack — ${ds}docker compose up -d
+  3. Start the stack — ${ds}docker compose up -d && ${ds}docker compose up -d vaier-shell
   4. Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin. Add Google or GitHub whenever you
                        want to invite anyone else.

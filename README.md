@@ -21,7 +21,7 @@
 | **Edge protection** | Traefik and CrowdSec turn scanners away, and Vaier says who and why. → [Networking](docs/NETWORKING.md#edge-hardening) |
 | **Explorer** | Files, containers, disks and backups across every machine in one place, opening on what needs you. → [Explorer](docs/EXPLORER.md) |
 | **Map & Topology** | Your sites and tunnels on a map, or as one picture. Nobody is tracked. → [Explorer](docs/EXPLORER.md#topology) |
-| **Web terminal** | A persistent SSH shell to any machine in the browser; credentials stay on the server. → [Explorer](docs/EXPLORER.md#web-terminal) |
+| **Web terminal** | A persistent SSH shell to any machine in the browser, still there while Vaier itself is down; credentials stay on the server. → [Explorer](docs/EXPLORER.md#web-terminal) |
 | **Backups** | Pick a backup server, then tick what matters and press **Back up**; archives stay readable even without Vaier. → [Backup](docs/BACKUP.md) |
 | **Alerts** | Disk forecasts, stopped containers, failing certificates, image and OS updates — mail only when something is wrong, and an optional outside ping for when Vaier itself stops. → [Monitoring](docs/MONITORING.md) |
 | **Chat** | Ask Marvin about your fleet in plain words; he acts only on your click. → [Chat](docs/CHAT.md) |

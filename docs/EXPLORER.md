@@ -174,6 +174,7 @@ The **Shell** door opens a real SSH shell to the machine, the **Vaier server** i
 - It returns to the shell you last used on that machine, from any device. **Duplicate** opens a fresh one.
 - The window opens where you last moved, resized or closed one. To reopen it on another screen, Chrome asks once to let Vaier manage windows on all your displays. If that screen is gone, it opens on the one you have.
 - Shells run in tmux, so closing the window or a redeploy only disconnects. Only **Exit shell** ends one.
+- The shell window lives at `shell.<domain>` and keeps working while Vaier is down or restarting: open `shell.<domain>` and pick a machine. A command Vaier hands you to run still opens in a window on `vaier.<domain>`.
 - **Shells** lists other Vaier shells on the machine to **Reattach** or **End**.
 - **Copy** copies a selection, or shows the screen as selectable text.
 - **Send password** types the stored password into a `sudo` prompt without the browser seeing it.
