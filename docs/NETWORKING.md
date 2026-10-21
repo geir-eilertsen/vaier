@@ -123,7 +123,7 @@ A name too close to an existing one is refused: `printer-cabin` beside `printer.
 
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
 - **Ignore** hides a row from **Ready to publish**.
-- **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page. Vaier asks the port itself whether it speaks http or https, so it must be answering when you publish. A port that only sends the browser on to the device's own https (a camera's port 80, say) is published on that https port instead, because a browser outside could not follow it.
+- **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page. For it, and for a LAN container Vaier found, Vaier asks the port itself whether it speaks http or https, so it must be answering when you publish. A port that only sends the browser on to the device's own https (a camera's port 80, say) is published on that https port instead, because a browser outside could not follow it.
 - On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
 
 For who can open a service, see [`docs/AUTH.md`](AUTH.md).
@@ -136,6 +136,8 @@ Set a **Path prefix** (e.g. `/auth`) to share one subdomain. The full path reach
 bmp.yourdomain.com         →  http://rig.yourdomain.com:8080
 bmp.yourdomain.com/auth/*  →  http://rig.yourdomain.com:8090/auth/*
 ```
+
+A route with a path prefix can't also send the subdomain's root elsewhere: its prefix is where it lands.
 
 ### Publishing a port that is not a website
 

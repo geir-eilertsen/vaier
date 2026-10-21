@@ -47,6 +47,8 @@ You never create one by hand: **Back up** makes one per machine. Each is an entr
 
 When a run fails because borg is missing, the machine's `backup` entry and **Needs you** offer **Get this machine ready**. It installs borg and grants the SSH user **passwordless sudo for the borg binary alone**, which **as root** jobs need. Where Vaier can't gain root, it hands you a `sudo bash <path>` command, with **Run it in ‹machine›'s shell** to type it there for you.
 
+Vaier works from a folder in the SSH user's home. A machine whose home it can't read, or whose home path holds a space or other unusual characters, can't be backed up until that is fixed; its runs fail saying so.
+
 ---
 
 ## Backup jobs
