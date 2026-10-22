@@ -199,7 +199,7 @@ configs:
           # Writes: cscli in CrowdSec, and re-running the sign-in renderers (#264).
           http-request allow if METH_POST { path,url_dec -m reg -i ^(/v[\d.]+)?/containers/crowdsec/exec$$ }
           http-request allow if METH_POST { path,url_dec -m reg -i ^(/v[\d.]+)?/exec/[a-zA-Z0-9]+/start$$ }
-          http-request allow if METH_POST { path,url_dec -m reg -i ^(/v[\d.]+)?/containers/(dex|oauth2-proxy|oauth2-proxy-console)/restart$$ }
+          http-request allow if METH_POST { path,url_dec -m reg -i ^(/v[\d.]+)?/containers/(dex|oauth2-proxy|oauth2-proxy-console|oauth2-proxy-shell)/restart$$ }
           http-request allow if METH_POST { path,url_dec -m reg -i ^(/v[\d.]+)?/containers/(dex-init|oauth2-proxy-init)/(start|wait)$$ }
           http-request deny
           default_backend dockerbackend
@@ -305,8 +305,9 @@ services:
               ipAllowList:
                 sourceRange: [127.0.0.1/32, 172.20.0.251/32, 172.20.0.252/32]
             # #351: FIRST on every router EXCEPT the recovery doors — Vaier's own sign-in path (the
-            # console on vaier.<domain> bar the phone-join router, oauth2.<domain>, dex.<domain>) —
-            # so a banned operator can still sign in and lift the ban. Vaier's routers name it in
+            # console on vaier.<domain> bar the phone-join router, oauth2.<domain>, dex.<domain>)
+            # and the shell gateway on shell.<domain> — so a banned operator can still sign in and
+            # lift the ban. Vaier's routers name it in
             # their labels; every route Vaier writes to its file carries it first. The console stays
             # behind oauth2-proxy and the admin gate: only the ban is not enforced there.
             # Traefik's CrowdSec plugin in STREAM mode: the block list is pulled from the Security
@@ -584,7 +585,7 @@ services:
     labels:
       # The haproxy_template's digest (DockerComposeStructureTest names the value). Compose misses an edit
       # inside an inline config, so without this an upgrade keeps the old proxy rules.
-      - vaier.rules-digest=4e65674e0fc4
+      - vaier.rules-digest=e48024f563a0
     # What passes is the haproxy_template allowlist below, not the image's env flags.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -1102,13 +1103,14 @@ services:
     labels:
       - traefik.enable=true
       # Signed in by its own proxy (oauth2-proxy-shell), then admin-checked inside the gateway from access.yml:
-      # no vaier-authz, which would ask Vaier.
+      # no vaier-authz, which would ask Vaier. A recovery door like the console (#351): no bouncer, which serves
+      # nothing before its first sync with CrowdSec.
       - traefik.http.routers.vaier-shell.rule=Host(`shell.${VAIER_DOMAIN}`)
       - traefik.http.routers.vaier-shell.entrypoints=websecure
       - traefik.http.routers.vaier-shell.tls.certresolver=letsencrypt
       - traefik.http.routers.vaier-shell.priority=100
       - traefik.http.routers.vaier-shell.service=vaier-shell
-      - traefik.http.routers.vaier-shell.middlewares=crowdsec-bouncer@file,vaier-shell-signin@docker,vaier-shell-authn@docker,vaier-frame-guard@file
+      - traefik.http.routers.vaier-shell.middlewares=vaier-shell-signin@docker,vaier-shell-authn@docker,vaier-frame-guard@file
       - traefik.http.services.vaier-shell.loadbalancer.server.port=8701
 
   # --- #305 social login: oauth2-proxy is the forward-auth gatekeeper; Vaier owns authorization
@@ -1318,6 +1320,8 @@ services:
     depends_on:
       oauth2-proxy-init:
         condition: service_completed_successfully
+        # It reads the rendered config once: a re-render must restart it, as for Dex.
+        restart: true
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -1359,6 +1363,8 @@ services:
     depends_on:
       oauth2-proxy-init:
         condition: service_completed_successfully
+        # It reads the rendered config once: a re-render must restart it, as for Dex.
+        restart: true
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -1408,6 +1414,8 @@ services:
     depends_on:
       oauth2-proxy-init:
         condition: service_completed_successfully
+        # It reads the rendered config once: a re-render must restart it, as for Dex.
+        restart: true
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -1416,7 +1424,7 @@ services:
       - traefik.http.routers.vaier-shell-oauth2.tls.certresolver=letsencrypt
       - traefik.http.routers.vaier-shell-oauth2.priority=300
       - traefik.http.routers.vaier-shell-oauth2.service=oauth2-proxy-shell
-      - traefik.http.routers.vaier-shell-oauth2.middlewares=crowdsec-bouncer@file,vaier-frame-guard@file
+      - traefik.http.routers.vaier-shell-oauth2.middlewares=vaier-frame-guard@file
       - traefik.http.services.oauth2-proxy-shell.loadbalancer.server.port=4180
       - traefik.http.middlewares.vaier-shell-signin.errors.status=401
       - traefik.http.middlewares.vaier-shell-signin.errors.service=oauth2-proxy-shell

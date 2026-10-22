@@ -22,7 +22,7 @@ Configuration and workflows beyond the basic Quick Start. If you're just getting
 
 Sign-in providers and mail are set later in the console — Google or GitHub under **People → Sign-in providers** ([AUTH](AUTH.md#registering-google-or-github)), mail under **Settings**.
 
-**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Answer no and it only refreshes the files; `docker compose pull && docker compose up -d` then updates by hand.
+**Re-run on an existing install**, it asks nothing and offers **Bring Vaier up to date now?** Answer no and it only refreshes the files; `docker compose pull && docker compose up -d` then updates by hand, followed by `docker compose up -d --no-deps --force-recreate vaier-shell` if you run the shell gateway.
 
 The commands it prints carry `sudo` when your user is not in the `docker` group.
 

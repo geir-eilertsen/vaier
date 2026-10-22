@@ -62,6 +62,7 @@ Say *"every morning, check whether the disk on Home is filling up, and only tell
 - An errand that finds nothing worth saying says nothing.
 - A report joins your Chat thread, or starts a fresh one if you've been quiet for three hours.
 - Chat's **Errands** tab lists every errand with a cancel button.
+- Errands run only while their owner is an admin. Demoting someone or turning them away deletes their errands and any confirmations waiting in their mail.
 
 ### When an errand finds something to do
 

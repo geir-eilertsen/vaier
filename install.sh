@@ -290,8 +290,13 @@ if $interactive; then
         || die "The stack didn't start — see the output above."
       # Retired: an older install's sidecar would restart for ever in a namespace that no longer exists.
       "${docker_cmd[@]}" rm -f wireguard-masquerade >/dev/null 2>&1 || true
-      # The shell gateway sits outside `up -d` so nothing recreates it by accident; start it if it is missing.
-      "${docker_cmd[@]}" compose up -d --no-deps --no-recreate vaier-shell \
+      # The shell gateway sits outside `up -d` so nothing recreates it by accident; start it if it is missing,
+      # and recreate it if wireguard was recreated under it, which leaves it in a dead network namespace.
+      shell_how=--no-recreate
+      shell_mode=$("${docker_cmd[@]}" inspect --format '{{.HostConfig.NetworkMode}}' vaier-shell 2>/dev/null || true)
+      shell_wg=$("${docker_cmd[@]}" inspect --format '{{.Id}}' wireguard 2>/dev/null || true)
+      [ -n "$shell_mode" ] && [ -n "$shell_wg" ] && [ "$shell_mode" != "container:$shell_wg" ] && shell_how=--force-recreate
+      "${docker_cmd[@]}" compose up -d --no-deps "$shell_how" vaier-shell \
         || warn "The shell at shell.$(env_value VAIER_DOMAIN) didn't start — see the output above."
       if ! $fresh; then say "Vaier is up to date."; exit 0; fi
       say "Waiting for Vaier to start (a minute or two the first time)…"
@@ -334,7 +339,8 @@ ${dns_step}  - Start the stack — ${ds}docker compose up -d && ${ds}docker comp
                        that first sign-in becomes the admin.
 
 Upgrading an existing install? Steps 1 and 2 are already done — pull the new images and bring it up:
-  ${ds}docker compose pull && ${ds}docker compose up -d && ${ds}docker rm -f wireguard-masquerade 2>/dev/null
+  ${ds}docker compose pull && ${ds}docker compose up -d && ${ds}docker compose up -d --no-deps --force-recreate vaier-shell
+  ${ds}docker rm -f wireguard-masquerade 2>/dev/null
 EOF
 else
   cat <<EOF

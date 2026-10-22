@@ -73,14 +73,14 @@ Each **backup run** ends as success, warnings, **incomplete**, failed, or unknow
 
 - **Incomplete** — some source files couldn't be read. The archive has holes, so this counts as a **failure**: red in the Explorer and a *Backup incomplete* mail naming the lost files.
 - **Warnings** — borg grumbled but lost nothing (a file changed while read). Not a failure; no mail.
-- **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers.
-- **Unknown** — the run ended without a result, usually because the machine restarted, or Vaier lost touch with the machine mid-run and still couldn't reach it 12 hours later. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure.
+- **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers. A machine that is merely off or asleep at backup time is mailed, and shown in **Needs you**, only once it has gone a day and a half without a good backup.
+- **Unknown** — the run ended without a result, usually because the machine restarted, or Vaier lost touch with the machine mid-run and still couldn't reach it 12 hours after it last saw the run going. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure and shown in **Needs you**.
 
 Once a week, between nightly runs, Vaier has borg read each repository back on the backup server, for at most half an hour at a time; a large repository is covered over several weeks. It emails the admins only when a check finds damage, once. While a check runs, **Back up now** on that machine says so and asks you to try again later.
 
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 
-Each machine keeps its borg passphrase file and run logs in `~/.vaier-backup`. After every run Vaier clears out logs older than a week and the passphrase files of backups it no longer keeps. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself.
+Each machine keeps its borg passphrase file and run logs in `~/.vaier-backup`. After every run Vaier clears out logs older than a week and the passphrase files of backups it no longer keeps. Starting a run closes any archive you had open on that machine, since borg needs the repository to itself. A restore or zip from the past that is still running is never cut off: the backup waits and is retried later that night, and **Back up now** says so.
 
 A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) is **skipped, not failed**: no run, no red mark, no mail. A machine that is merely off or unreachable at the scheduled hour fails that run, and Vaier keeps trying it every 15 minutes for the rest of the day.
 

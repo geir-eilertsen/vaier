@@ -121,7 +121,7 @@ The service is live at `https://subdomain.yourdomain.com`. If Traefik refuses th
 
 A name too close to an existing one is refused: `printer-cabin` beside `printer.cabin`, or `/a-b` beside `/a/b` on one subdomain. So are `vaier`, `oauth2` and `dex`, which Vaier uses for its own console and sign-in. Pick another.
 
-- Open a published service under its machine to edit it or **Unpublish** it. The container keeps running.
+- Open a published service under its machine to edit it or **Unpublish** it. The container keeps running. Unpublishing a host's last service also forgets who was allowed to open it, so a service published there later starts open to every approved person.
 - **Ignore** hides a row from **Ready to publish**.
 - **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page. For it, and for a LAN container Vaier found, Vaier asks the port itself whether it speaks http or https, so it must be answering when you publish. A port that only sends the browser on to the device's own https (a camera's port 80, say) is published on that https port instead, because a browser outside could not follow it.
 - On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
@@ -179,7 +179,7 @@ The Explorer's **Security** view lists every blocked address. Each row's **…**
 
 ### The recovery doors
 
-`vaier.<domain>`, `oauth2.<domain>` and `dex.<domain>` are the **recovery doors**: a CrowdSec ban does not apply to them, so it can't lock you out of the console that lifts it. They still require sign-in and admin approval.
+`vaier.<domain>`, `oauth2.<domain>`, `dex.<domain>` and the shell gateway `shell.<domain>` are the **recovery doors**: a CrowdSec ban does not apply to them, so it can't lock you out of the console that lifts it, or out of the shell when the rest is broken. They still require sign-in and admin approval.
 
 ## Wildcard DNS
 
