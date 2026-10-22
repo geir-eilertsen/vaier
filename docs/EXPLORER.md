@@ -192,7 +192,7 @@ Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. In vim, htop or Claude Code, hold **Shi
 
 Store the one SSH login Vaier uses for each machine, a password or a private key, from the machine's page. Secrets are encrypted and never shown back.
 
-**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. A printer, camera, smart device or phone has no shell, so Vaier doesn't offer SSH for one at all; if Vaier guessed the kind wrong, change what it is first. Turning it off first ends Vaier's shells on that machine, so any shell window open on it closes. Machines where Vaier signs in as `root` are tagged. No key? Vaier generates one and shows the line for `authorized_keys`.
+**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. A printer, camera, smart device or phone has no shell, so Vaier doesn't offer SSH for one at all; if Vaier guessed the kind wrong, change what it is first. Turning it off first ends Vaier's shells on that machine, so any shell window open on it closes. Machines where Vaier signs in as `root` are tagged. No key? **Generate keypair**: where Vaier already signs in as that same user, it puts the new key in `~/.ssh/authorized_keys` itself, checks it can sign in with it, and only then switches over, so nothing goes dark. Otherwise it says why, and after you confirm it shows the line to add to `authorized_keys` yourself.
 
 ### OS updates
 
