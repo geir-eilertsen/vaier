@@ -1246,8 +1246,14 @@ services:
           # federated:id makes Dex emit federated_claims (connector_id/user_id) so we can record which
           # identity provider each user last signed in with; the rest are oauth2-proxy's defaults.
           scope: openid email profile federated:id
+          # Dex's endpoints named here, not discovered at startup: Docker restarts the whole stack at once
+          # (an engine upgrade does), and a proxy that cannot reach Dex in its first seconds exits for good.
+          loginURL: https://dex.$${VAIER_DOMAIN}/auth
+          redeemURL: https://dex.$${VAIER_DOMAIN}/token
           oidcConfig:
             issuerURL: https://dex.$${VAIER_DOMAIN}
+            skipDiscovery: true
+            jwksURL: https://dex.$${VAIER_DOMAIN}/keys
             audienceClaims: [aud]
             emailClaim: email
             groupsClaim: groups
