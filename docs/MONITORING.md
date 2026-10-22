@@ -27,7 +27,7 @@ Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER
 
 ### Setting up mail
 
-In **Settings → Mail**, type the **Email** address to send from and its **App password**. For Gmail, Yahoo, iCloud and Fastmail addresses Vaier fills in the mail server itself and links the page that makes an app password; for any other provider, fill in **Another mail provider**. Mail goes out as that address unless you set **Send as**. **Save** checks the login and sends a test to **Send a test to** — your own address unless you change it. A failed save says why; `535` means the address or app password is wrong.
+In **Settings → Mail**, type the **Email** address to send from and its **App password**. For Gmail, Yahoo, iCloud and Fastmail addresses Vaier fills in the mail server itself, and **How to make one** walks you through making an app password; for any other provider, fill in **Another mail provider**. Mail goes out as that address unless you set **Send as**. **Save** checks the login and sends a test to **Send a test to** — your own address unless you change it. A failed save says why; `535` means the address or app password is wrong.
 
 For Gmail, turn on **2-Step Verification** first (myaccount.google.com/security): Google offers app passwords only once it is on, and a Google Workspace admin may have switched them off for the domain. Gmail always sends as the account's own address.
 
@@ -129,7 +129,7 @@ Vaier also runs it every five minutes and mails you when a check has failed twic
 Vaier cannot mail you about its own death, so two things cover it:
 
 - **A health check.** Docker asks Vaier every 30 seconds whether it answers. A Vaier that hangs shows as `unhealthy` in `docker compose ps`, and the console shows the offline page until it answers again. Docker does not restart it for you: `docker compose restart vaier` does.
-- **Alive ping** (Settings → *Alive ping*, off by default). Paste a ping URL from an outside monitor such as healthchecks.io; Vaier opens it every five minutes, and the monitor alerts you when the pings stop. Set the monitor's grace to 15 minutes or more so a deploy does not page you.
+- **Alive ping** (Settings → *Alive ping*, off by default). Paste a ping URL from an outside monitor such as healthchecks.io (**How to set one up** has the steps); Vaier opens it every five minutes, and the monitor alerts you when the pings stop. Set the monitor's grace to 15 minutes or more so a deploy does not page you.
 
 ---
 

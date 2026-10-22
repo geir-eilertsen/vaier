@@ -43,7 +43,7 @@ Configure Google, GitHub, both, or neither for now. The sign-in page shows a but
 
 Then give Vaier the client id and secret, one of two ways:
 
-- **From People → Sign-in providers.** The section shows the redirect URI with a copy button, a link to each provider's console, and the id and secret fields. **Save** applies it in a few seconds; once set, it folds to one line with **Change**. If it fails, the working config stays and the error shows under the button. The secret is write-only and is stored in `./vaier/config/sign-in-providers.env` (mode `0600`).
+- **From People → Sign-in providers.** The section shows the redirect URI with a copy button, a step-by-step **How to set up** for each provider with a link to its console, and the id and secret fields. **Save** applies it in a few seconds; once set, it folds to one line with **Change**. If it fails, the working config stays and the error shows under the button. The secret is write-only and is stored in `./vaier/config/sign-in-providers.env` (mode `0600`).
 - **From `.env`.** Set `VAIER_OIDC_GOOGLE_CLIENT_ID` / `VAIER_OIDC_GOOGLE_CLIENT_SECRET` and/or `VAIER_OIDC_GITHUB_CLIENT_ID` / `VAIER_OIDC_GITHUB_CLIENT_SECRET` and run `docker compose up -d`. **`.env` wins**: People then shows that provider read-only as *set in .env*.
 
 `install.sh` generates the stack's own secrets into `.env` for you. Missing one? `docker compose` stops with a message naming it: re-run the installer in the `vaier` folder. It adds what is missing and never overwrites a value.
