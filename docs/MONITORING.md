@@ -91,7 +91,7 @@ Once a day Vaier compares each container's image digest with what its registry s
 - **Vaier's own stack is not watched** — it updates with Vaier; see [Updating Vaier itself](#updating-vaier-itself).
 - **One rollup mail** when images newly go out of date, naming image and machine (`vaultwarden/server:latest on Home`).
 - An image on a machine that was offline at sweep time, or in a stopped container, keeps what Vaier knew — it isn't mailed again when it's back.
-- A **moving tag** (rebuilt daily, like `netdata/netdata:latest`) keeps its mark, labelled `moving`, but is never mailed.
+- A **moving tag** (rebuilt daily, like `netdata/netdata:latest`) keeps its mark, labelled `moving`, but is never mailed and never put in **Needs you**.
 - A registry Vaier can't read, a locally built image or a digest-pinned one reads **unknown** and shows no mark — so no mark is not a promise the image is current.
 
 Out-of-date containers wear a small yellow mark in the **Explorer**. Only the Vaier server's and **server peers**' containers are covered; LAN servers read as unknown for now. **Check the registries now**, in a machine's container list, re-checks straight away.
