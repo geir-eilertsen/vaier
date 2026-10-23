@@ -147,8 +147,12 @@ The **Topology** draws the fleet as a painted coast under the real sky. Hover an
 - A **wake** to the lighthouse is a tunnel.
 - A **boat** is any other peer. Disconnected, it lies moored.
 - A **pirate ship** is a blocked address. Click it to open [Security](#security).
-- Each **window** is a website the machine publishes, lit while it answers and dark while it doesn't. A house that is down or away is dark throughout.
-- A white **flag with a red cross** over a house means that machine is in **Needs you**; hover it to see why.
+- Each **window** is a website the machine publishes, lit while it answers and dark while it doesn't. **Curtains** mean visitors sign in first; bare glass lets anyone in. A house that is down or away is dark throughout.
+- **Smoke** from a chimney means the machine runs apps besides its websites; hover the house to see which.
+- A white **flag with a red cross** over a house means that machine is in **Needs you**; hover it to see why. On the lighthouse it is something for the whole fleet.
+- A bright **lump of light** travelling the lights and wakes is work under way: a backup going to the stabbur, or a copy going to another machine. Hover it to see which.
+- A **lantern by the door** marks the machine your browser comes through.
+- The **weather** over each coast is the real weather there: cloud, fog, drizzle, rain, snow, thunderstorms, and whitecaps in a strong wind. To get it, Vaier sends Open-Meteo each site's region, rounded to half a degree (tens of kilometres), twice an hour.
 
 **Full screen** is the icon in the top-right corner.
 
