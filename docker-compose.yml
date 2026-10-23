@@ -503,6 +503,9 @@ services:
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      # Traefik's 60 s default cut every large upload (phone video backups to the NAS) and left DSM
+      # a half-written temp file per retry.
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=30m
       # The tunnel door: hello and goodbye from the Vaier app, reachable only through WireGuard (no host
       # port). The public entrypoints are the default, so a router naming none never lands here.
       - --entrypoints.tunnel.address=:8090
