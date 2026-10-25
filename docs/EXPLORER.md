@@ -42,7 +42,7 @@ Machines are **grouped by site**: the Vaier server's site first, then each house
 
 Some machines are off because you turned them off. Tap **I switched it off** on its "not answering" row and Vaier stops treating that as trouble: its card turns grey, nothing is mailed, and its nightly backup is skipped, not failed.
 
-Its page says "Switched off on purpose since 14 Sep", with **It's back on**. You rarely need that button: the mark clears itself the first time Vaier reaches the machine again. Phones, laptops and the Vaier server are never offered it.
+Its page says "Switched off on purpose since 14 Sep", with **It's back on**, and its Shell, Files, Storage and Apps are greyed until it is back. You rarely need that button: the mark clears itself the first time Vaier reaches the machine again. Phones, laptops and the Vaier server are never offered it.
 
 ---
 
