@@ -101,13 +101,14 @@ Pick the fleet's backup server with **Make this the fleet's backup server** on a
 
 ### Selection, transfers and viewing files
 
-**Tick files to build a Selection**; it survives moving between folders and machines. The bar above the listing carries every verb that applies.
+**Tick files to build a Selection**; it survives moving between folders and machines. The bar above the listing carries every verb that applies. A folder open in several windows keeps up in all of them as files are added, copied in or deleted, without reloading.
 
 - **View** images, PDFs, text and video in a new tab. HTML and SVG are download-only.
 - **Download** a file, or a zip of a folder or several items. A zip holds no links, so each link inside the folder is listed in *Not included.txt*, with anything Vaier cannot read and anything that is not an ordinary file (a pipe or socket). A pipe or device on its own is refused rather than downloaded or viewed.
 - **Transfer** a file or folder to another machine, with live progress. Links inside the folder arrive as links, pointing where they pointed. What Vaier cannot read, or a link it cannot make there, is left out, and the finished transfer says how many items it left out and names them. Something of the same name already there is never replaced without asking. The one exception is a restore: the past put back on its own path on its own machine goes ahead without asking; pasted anywhere else it asks like any copy.
 - **Upload** by dropping files on the folder or with **Upload files**. Files only. An existing name is never replaced without asking.
-- **Delete**, confirmed by typing the file's name (or, for several, how many). It cannot be undone. A folder holding something Vaier's sign-in may not remove is deleted only partway: the message says how many items were already gone, and the listing shows what is left.
+- **New folder**, beside Upload, makes an empty folder in the one you are in. A name already taken is refused.
+- **Delete**: the first click turns the button into *Delete?*, the second deletes. It cannot be undone. A folder holding something Vaier's sign-in may not remove is deleted only partway: the message says how many items were already gone, and the listing shows what is left.
 
 **Every write goes to the present.** Copying *from* an archive and pasting back is how you restore. Verbs Vaier's sign-in can't perform are hidden; an ACL or read-only mount can still make the machine refuse.
 
@@ -196,7 +197,7 @@ Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. In vim, htop or Claude Code, hold **Shi
 
 Store the one SSH login Vaier uses for each machine, a password or a private key, from the machine's page. Secrets are encrypted and never shown back.
 
-**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. A printer, camera, smart device or phone has no shell, so Vaier doesn't offer SSH for one at all; if Vaier guessed the kind wrong, change what it is first. Turning it off first ends Vaier's shells on that machine, so any shell window open on it closes. Machines where Vaier signs in as `root` are tagged. No key? **Generate keypair**: where Vaier already signs in as that same user, it puts the new key in `~/.ssh/authorized_keys` itself, checks it can sign in with it, and only then switches over, so nothing goes dark. Otherwise it says why, and after you confirm it shows the line to add to `authorized_keys` yourself.
+**SSH access** turns SSH on or off per machine; off means Vaier never signs in there: Shell, Files and Storage are hidden, and Marvin, backups and fleet credentials leave it alone. A printer, camera, smart device or phone has no shell, so Vaier doesn't offer SSH for one at all; if Vaier guessed the kind wrong, change what it is first. Turning it off ends Vaier's shells on that machine, so any shell window open on it closes, within about ten seconds for one opened from the shell window. Machines where Vaier signs in as `root` are tagged. No key? **Generate keypair**: where Vaier already signs in as that same user, it puts the new key in `~/.ssh/authorized_keys` itself, checks it can sign in with it, and only then switches over, so nothing goes dark. Generating again removes the key Vaier made before. Over a password login it does this only where that user needs no password for root, since OS updates need it otherwise. When Vaier can't do it itself, it says why, and after you confirm it shows the line to add to `authorized_keys` yourself.
 
 ### OS updates
 

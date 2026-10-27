@@ -61,7 +61,7 @@ borg runs as the SSH user, so **files that user cannot read are skipped**. Conta
 
 **You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up as root**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
 
-To turn it back **off**, open the **Back up as root** fold on the `backup` entry and untick it.
+To turn it back **off**, open the **Back up as root** fold on the `backup` entry and untick it. Turned off while its grant is still installing, it stays off.
 
 **A passwordless `sudo borg` is root-equivalent.** Turning it on makes Vaier's SSH credential for that machine as powerful as root. Grant it only where that is acceptable.
 
