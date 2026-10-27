@@ -810,9 +810,12 @@ services:
         # Vaier container runs as UID 1000 (Dockerfile USER directive). Bind mounts inherit
         # host ownership, so we chown the config dirs once on every start.
         # The tunnel rewrites its status through a *.tmp file every few seconds; one that vanishes mid-walk
-        # failed the whole init and kept Vaier down, so those are skipped.
+        # failed the whole init and kept Vaier down. Only that is forgiven; any other error still stops the start.
         for d in /vaier/config /traefik/config /wireguard/config /icons /vaier-lan-routes; do
-          [ -d "$$d" ] && find "$$d" ! -name '*.tmp' -exec chown 1000:1000 {} +
+          [ -d "$$d" ] || continue
+          if ! find "$$d" ! -name '*.tmp' -exec chown 1000:1000 {} + 2>/tmp/chown.err; then
+            if grep -v 'No such file or directory' /tmp/chown.err | grep -q .; then cat /tmp/chown.err; exit 1; fi
+          fi
         done
         # #477: a peer config holds its preshared key (and a server-made peer's private key). Vaier writes
         # new ones owner-only; this closes up the ones written before it did.
