@@ -90,6 +90,10 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 
 ---
 
+### Phone positions
+
+For home automation (openHAB and the like), the Vaier app on Android can tell your own MQTT broker where the phone is. In **Settings → Phone positions**, enter the broker's login, its address through the tunnel (`host:port`) and its public host (reached on 443). Then on a phone's page, tick **Report its position**. The phone publishes `roaming/phone/<id>/location`, `accuracy`, `wifi` and `mobile` (the carrier while off Wi-Fi), retained, after a move of 100 m or a Wi-Fi change, and never otherwise. It picks the change up the next time it connects, and asks for location *all the time* the first time. Vaier itself never sees a position. An empty value is published as a cleared topic: off Wi-Fi a subscriber starting later finds no `wifi`, and on Wi-Fi no `mobile`.
+
 ## LAN servers and the LAN scanner
 
 **LAN servers** — a NAS, printer, IPMI host, or extra Docker host on a peer's LAN — need only a LAN address.
@@ -171,7 +175,7 @@ Traefik adds a baseline to every response:
 
 The Explorer's **Security** view lists every blocked address. Each row's **…** menu offers **Lift the block** and **Trust this address**. **Block an address** bans one by hand for up to 7 days.
 
-**Caveat:** trusting lifts the block at once, but the allowlist entry — and any **Untrust** — only takes effect when CrowdSec next restarts. Vaier won't restart it for you.
+Trusting lifts the block and adds the address to CrowdSec's allowlist at once; **Untrust** removes it at once too. No CrowdSec restart is needed.
 
 **If CrowdSec bans your own address**, sign in through the [recovery doors](#the-recovery-doors) and lift the block in the Security view. Your published services refuse you until you do. From the host, `docker exec crowdsec cscli decisions delete --all` clears every block.
 

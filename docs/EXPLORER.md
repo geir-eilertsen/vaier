@@ -164,9 +164,9 @@ The **Topology** draws the fleet as a painted coast under the real sky. Hover an
 **Security**, in the **navigation bar**, lists who the [edge's CrowdSec bouncer](NETWORKING.md#edge-hardening) is keeping out right now: what each address tried, its country, and how long it stays out.
 
 - **Lift the block** lets the address in now. It is blocked again if it misbehaves.
-- **Trust this address** lifts the block and never blocks it again. This takes effect at CrowdSec's next restart, which Vaier won't do for you.
+- **Trust this address** lifts the block and never blocks it again. It takes effect at once.
 - **Block an address** blocks one by hand for 1 hour to 7 days. Your trusted networks and your own address are refused.
-- **Untrust** removes an address you trusted, also at the next restart.
+- **Untrust** removes an address you trusted, at once.
 
 If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the-recovery-doors) and lift it. What gets mailed: [MONITORING](MONITORING.md#what-the-edge-blocks).
 
