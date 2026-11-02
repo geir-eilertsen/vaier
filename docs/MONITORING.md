@@ -80,7 +80,7 @@ Trouble must show on two consecutive scrapes, so an **Update** or a restart does
 
 **What you see.** The container list says **gone**, **unhealthy** or **restart-looping**, and the machine's pane gets a card under *What to do next* saying when it was last well. It has **no button**: Vaier cannot start or restart containers.
 
-**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Home*), one when it is running well again; getting worse earns a new mail. A removed container earns one mail and is forgotten. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
+**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Home*), one when it is running well again; getting worse earns a new mail. A container you remove is forgotten without a mail; only one that stops, crashes or turns unhealthy is news. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
 
 ---
 
