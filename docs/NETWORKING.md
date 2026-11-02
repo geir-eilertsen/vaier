@@ -88,11 +88,20 @@ The private key never leaves the device, so there is nothing to save.
 
 Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tunnel. Its own password is off, so publish its admin page only behind social login, never as public; only admins can open it. Through the tunnel a device reaches only that DNS and Vaier's published addresses — never the containers of Vaier's own stack directly.
 
+### MQTT broker
+
+Vaier runs an MQTT broker (Mosquitto). Through the tunnel every machine and phone reaches it at `10.13.13.1:1883`; another Docker stack on the Vaier server joins the external network `vaier-mqtt` and uses `mosquitto:1883`; from the internet, publish it as a **stream** (see below), e.g. `mqtt.example.com:443`. Nobody can sign in until you add a login, on the Vaier server:
+
+```
+docker exec mosquitto mosquitto_passwd -b /mosquitto/config/passwordfile <user> <password>
+docker kill -s HUP mosquitto
+```
+
 ---
 
 ### Phone positions
 
-For home automation (openHAB and the like), the Vaier app on Android can tell your own MQTT broker where the phone is. In **Settings → Phone positions**, enter the broker's login, its address through the tunnel (`host:port`) and its public host (reached on 443). Then on a phone's page, tick **Report its position**. The phone publishes `roaming/phone/<id>/location`, `accuracy`, `wifi`, `mobile` (the carrier while off Wi-Fi) and `battery`, retained. It reports a Wi-Fi change or a ten-point battery change at once, and a move of 100 m at once when moving slowly or within a kilometre of a place where it has used Wi-Fi. Faster travel elsewhere is reported at most every 5 minutes, and above about 150 km/h every 15; a move held back that way still goes out when the wait is up. Nothing is sent while the phone lies still. The Wi-Fi places stay on the phone. It picks the change up the next time it connects, and asks for location *all the time* the first time. Vaier itself never sees a position. An empty value is published as a cleared topic: off Wi-Fi a subscriber starting later finds no `wifi`, and on Wi-Fi no `mobile`.
+For home automation (openHAB and the like), the Vaier app on Android can tell an MQTT broker — Vaier's own, or yours — where the phone is. In **Settings → Phone positions**, enter the broker's login, its address through the tunnel (`10.13.13.1:1883` for Vaier's) and its public host (reached on 443). Then on a phone's page, tick **Report its position**. A phone's **Owner** is one of the people Vaier knows, or *Nobody*: you pick it when you approve the phone, set to yourself to start with, and can change it on the phone's page. The phone publishes `roaming/phone/<id>/location`, `accuracy`, `wifi`, `mobile` (the carrier while off Wi-Fi), `battery` and `owner`, retained. `owner` is the owner's short name — the first word of their name, or the start of their email until they have signed in (`geir` for Geir Eilertsen) — and the phone receives house messages for them on `inbox/<owner>`. It reports a Wi-Fi change or a ten-point battery change at once, and a move of 100 m at once when moving slowly or within a kilometre of a place where it has used Wi-Fi. Faster travel elsewhere is reported at most every 5 minutes, and above about 150 km/h every 15; a move held back that way still goes out when the wait is up. Nothing is sent while the phone lies still. On a Wi-Fi network it has always seen in one place, the phone reports that place, so a wrong position from Wi-Fi positioning never shows as a move; a network it has seen more than 5 km apart, like a car's, is treated as travelling. The Wi-Fi places stay on the phone. It picks the change up the next time it connects, and asks for location *all the time* the first time. Vaier itself never sees a position or a message. An empty value is published as a cleared topic: off Wi-Fi a subscriber starting later finds no `wifi`, and on Wi-Fi no `mobile`.
 
 ## LAN servers and the LAN scanner
 
@@ -128,7 +137,7 @@ A name too close to an existing one is refused: `printer-cabin` beside `printer.
 - Open a published service under its machine to edit it or **Unpublish** it. The container keeps running. Unpublishing a host's last service also forgets who was allowed to open it, so a service published there later starts open to every approved person.
 - **Ignore** hides a row from **Ready to publish**.
 - **Publish a service by hand**, at the top of a machine's services, publishes a port Vaier did not find as a container — a LAN app or a device's own web page. For it, and for a LAN container Vaier found, Vaier asks the port itself whether it speaks http or https, so it must be answering when you publish. A port that only sends the browser on to the device's own https (a camera's port 80, say) is published on that https port instead, because a browser outside could not follow it.
-- On the Vaier server, only **Traefik's dashboard** and **Pi-hole's admin** are offered from Vaier's own stack. Publish them behind social login: like the console, only admins can open them, and only admins see their tiles.
+- On the Vaier server, only **Traefik's dashboard**, **Pi-hole's admin** and the **MQTT broker** are offered from Vaier's own stack. Publish the broker as a stream and the other two behind social login: like the console, only admins can open them, and only admins see their tiles.
 
 For who can open a service, see [`docs/AUTH.md`](AUTH.md).
 

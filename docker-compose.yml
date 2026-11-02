@@ -20,6 +20,9 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+  # The broker alone, for other stacks on this server to join: vaier-network would hand them Vaier's internals.
+  mqtt:
+    name: vaier-mqtt
 
 # The sign-in cookie secret reaches both oauth2-proxies as a file (#702): a flag would sit in every
 # `docker inspect`. This line only keeps the "re-run install.sh" message for a .env without it.
@@ -49,13 +52,18 @@ configs:
           # PostUp's `-o eth+`, which is a no-op when the NIC isn't named eth*. #248.
           iptables -t nat -C POSTROUTING ! -o wg0 -j MASQUERADE 2>/dev/null || \
             iptables -t nat -A POSTROUTING ! -o wg0 -j MASQUERADE
-          # VPN -> the stack's own bridge: a peer reaches Pi-hole and Traefik (incl. the tunnel door) only.
+          # VPN -> the broker: a house gateway routes only the tunnel subnet, so the server's tunnel address
+          # carries MQTT on to it.
+          iptables -t nat -C PREROUTING -i wg0 -d 10.13.13.1 -p tcp --dport 1883 -j DNAT --to-destination 172.20.0.83:1883 2>/dev/null || \
+            iptables -t nat -A PREROUTING -i wg0 -d 10.13.13.1 -p tcp --dport 1883 -j DNAT --to-destination 172.20.0.83:1883
+          # VPN -> the stack's own bridge: a peer reaches Pi-hole, Traefik (incl. the tunnel door) and the broker only.
           # Vaier, docker-proxy and Traefik's API trust the bridge and carry no auth of their own.
           # Refilled whenever its last rule is not this version's marked DROP, so an edited rule set reaches a
           # running tunnel and a half-filled chain is repaired. The DROP goes in first, so it is never open.
-          if ! iptables -C VAIER-TUNNEL -m comment --comment vaier-tunnel-v2 -j DROP 2>/dev/null; then
+          if ! iptables -C VAIER-TUNNEL -m comment --comment vaier-tunnel-v3 -j DROP 2>/dev/null; then
             iptables -N VAIER-TUNNEL 2>/dev/null || iptables -F VAIER-TUNNEL
-            iptables -A VAIER-TUNNEL -m comment --comment vaier-tunnel-v2 -j DROP
+            iptables -A VAIER-TUNNEL -m comment --comment vaier-tunnel-v3 -j DROP
+            iptables -I VAIER-TUNNEL 1 -d 172.20.0.83 -p tcp --dport 1883 -j ACCEPT
             iptables -I VAIER-TUNNEL 1 -d 172.20.0.251 -p tcp -m multiport --dports 80,443,8090 -j ACCEPT
             iptables -I VAIER-TUNNEL 1 -d 172.20.0.53 -p tcp --dport 53 -j ACCEPT
             iptables -I VAIER-TUNNEL 1 -d 172.20.0.53 -p udp --dport 53 -j ACCEPT
@@ -130,6 +138,16 @@ configs:
   # and $${BIND_CONFIG} are escaped here ($$ = literal $ after Compose interpolation)
   # and resolved at container start. Regex anchors (start$$, push$$) are likewise
   # escaped. Everything inside { env(NAME) -m bool } is haproxy syntax, not shell.
+  # The broker's own settings; its logins live in ./mosquitto/config/passwordfile.
+  mosquitto_conf:
+    content: |
+      persistence true
+      persistence_location /mosquitto/data/
+      password_file /mosquitto/config/passwordfile
+      allow_anonymous false
+      listener 1883
+      log_dest stdout
+
   haproxy_template:
     content: |
       global
@@ -230,7 +248,7 @@ services:
       - INTERNAL_SUBNET=10.13.13.0
       - ALLOWEDIPS=0.0.0.0/0
     labels:
-      - vaier.rules-digest=b0b3a2097d04
+      - vaier.rules-digest=7804ccae2f35
       - vaier.peers-digest=d73169d48c03
     configs:
       - source: wireguard_tunnel_rules
@@ -672,6 +690,34 @@ services:
     networks:
       vaier-network:
         ipv4_address: 172.20.0.53
+
+  # The fleet's MQTT broker. No host port: peers reach it at the server's tunnel address, 10.13.13.1:1883,
+  # other stacks here as mosquitto:1883 on vaier-mqtt, and the internet only as a published stream on 443.
+  # Nobody can sign in until a login is added.
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    logging: *container-log
+    container_name: mosquitto
+    mem_limit: 32m
+    configs:
+      - source: mosquitto_conf
+        target: /mosquitto/vaier.conf
+        mode: 0444
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        f=/mosquitto/config/passwordfile
+        touch $$f && chown 1883:1883 $$f && chmod 0600 $$f
+        exec /docker-entrypoint.sh mosquitto -c /mosquitto/vaier.conf
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+    restart: unless-stopped
+    networks:
+      vaier-network:
+        ipv4_address: 172.20.0.83
+      mqtt:
 
   # Rotates Traefik's access log (copytruncate — Traefik has no reopen signal to support any other
   # rotation strategy) so it can't grow unbounded now that it's written to a file for CrowdSec.

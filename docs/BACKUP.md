@@ -93,6 +93,8 @@ Open a **backup repository** entry to list its archives. To restore, open an arc
 - The machine that reads it needs the backup program and a way to the backup server, so it is the backup server's machine or one that backs up. Vaier tries up to three in turn.
 - A backup run of the machine closes any archive of it that is open elsewhere.
 
+**A machine can't erase its own backups.** Each machine's key on the backup server can add archives but never delete one. Vaier prunes and compacts every repository itself, once a day after the night's runs, with its own key, which stays in Vaier; retention is still set per job. If archives go missing that Vaier didn't prune, Vaier stops pruning those backups, mails you once, and the repository's entry lists them — they can still be brought back on the backup server. If you deleted them yourself, press **Accept that they are gone**. A backup server Vaier didn't set up, with no published host keys, keeps the old behaviour: machines prune their own.
+
 ---
 
 ## Survival kit
