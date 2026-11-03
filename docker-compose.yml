@@ -144,6 +144,7 @@ configs:
       persistence true
       persistence_location /mosquitto/data/
       password_file /mosquitto/config/passwordfile
+      acl_file /mosquitto/config/aclfile
       allow_anonymous false
       listener 1883
       log_dest stdout
@@ -707,15 +708,25 @@ services:
       - /bin/sh
       - -c
       - |
-        # Vaier keeps the logins in $$v (#763); the broker reads its own copy, so each side owns its file.
+        # Vaier keeps the logins in $$v and their ACL in $$va (#763, #764); the broker reads its own copies.
         c=/mosquitto/config/passwordfile
         v=/mosquitto-logins/passwordfile
-        touch "$$c" && chown 1883:1883 "$$c" && chmod 0600 "$$c"
+        ca=/mosquitto/config/aclfile
+        va=/mosquitto-logins/aclfile
+        touch "$$c" "$$ca" && chown 1883:1883 "$$c" "$$ca" && chmod 0600 "$$c" "$$ca"
         [ -e "$$v" ] || cp "$$c" "$$v"
-        chown -R 1000:1000 /mosquitto-logins && chmod 0600 "$$v"
+        # Until Vaier writes the ACL, every login already there keeps the whole broker.
+        [ -e "$$va" ] || awk -F: 'NF>1 {if (n++) print ""; print "user " $$1; print "topic readwrite #"}' "$$v" > "$$va"
+        chown -R 1000:1000 /mosquitto-logins && chmod 0600 "$$v" "$$va"
+        take() {
+          cmp -s "$$1" "$$2" && return 1
+          cp "$$1" "$$2.new" && chown 1883:1883 "$$2.new" && chmod 0600 "$$2.new" && mv "$$2.new" "$$2"
+        }
         take_logins() {
-          cmp -s "$$v" "$$c" && return 1
-          cp "$$v" "$$c.new" && chown 1883:1883 "$$c.new" && chmod 0600 "$$c.new" && mv "$$c.new" "$$c"
+          changed=1
+          take "$$va" "$$ca" && changed=0
+          take "$$v" "$$c" && changed=0
+          return $$changed
         }
         take_logins
         (while sleep 5; do take_logins && kill -HUP 1; done) &
