@@ -90,12 +90,7 @@ Personal devices use Vaier's **Pi-hole** for DNS, reachable only through the tun
 
 ### MQTT broker
 
-Vaier runs an MQTT broker (Mosquitto). Through the tunnel every machine and phone reaches it at `10.13.13.1:1883`; another Docker stack on the Vaier server joins the external network `vaier-mqtt` and uses `mosquitto:1883`; from the internet, publish it as a **stream** (see below), e.g. `mqtt.example.com:443`. Nobody can sign in until you add a login, on the Vaier server:
-
-```
-docker exec mosquitto mosquitto_passwd -b /mosquitto/config/passwordfile <user> <password>
-docker kill -s HUP mosquitto
-```
+Vaier runs an MQTT broker (Mosquitto). Through the tunnel every machine and phone reaches it at `10.13.13.1:1883`; another Docker stack on the Vaier server joins the external network `vaier-mqtt` and uses `mosquitto:1883`; from the internet, publish it as a **stream** (see below), e.g. `mqtt.example.com:443`. Nobody can sign in until you add a login: in **Settings → MQTT broker**, name it and press **Add login**. Vaier makes the password and shows it once — copy it then. **New password** replaces a login's password and **Remove** shuts it out; the broker takes either within a few seconds, without dropping anyone else.
 
 ---
 

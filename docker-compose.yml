@@ -138,7 +138,7 @@ configs:
   # and $${BIND_CONFIG} are escaped here ($$ = literal $ after Compose interpolation)
   # and resolved at container start. Regex anchors (start$$, push$$) are likewise
   # escaped. Everything inside { env(NAME) -m bool } is haproxy syntax, not shell.
-  # The broker's own settings; its logins live in ./mosquitto/config/passwordfile.
+  # The broker's own settings; Vaier keeps its logins in ./mosquitto/logins/passwordfile.
   mosquitto_conf:
     content: |
       persistence true
@@ -707,12 +707,23 @@ services:
       - /bin/sh
       - -c
       - |
-        f=/mosquitto/config/passwordfile
-        touch $$f && chown 1883:1883 $$f && chmod 0600 $$f
+        # Vaier keeps the logins in $$v (#763); the broker reads its own copy, so each side owns its file.
+        c=/mosquitto/config/passwordfile
+        v=/mosquitto-logins/passwordfile
+        touch "$$c" && chown 1883:1883 "$$c" && chmod 0600 "$$c"
+        [ -e "$$v" ] || cp "$$c" "$$v"
+        chown -R 1000:1000 /mosquitto-logins && chmod 0600 "$$v"
+        take_logins() {
+          cmp -s "$$v" "$$c" && return 1
+          cp "$$v" "$$c.new" && chown 1883:1883 "$$c.new" && chmod 0600 "$$c.new" && mv "$$c.new" "$$c"
+        }
+        take_logins
+        (while sleep 5; do take_logins && kill -HUP 1; done) &
         exec /docker-entrypoint.sh mosquitto -c /mosquitto/vaier.conf
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/logins:/mosquitto-logins
     restart: unless-stopped
     networks:
       vaier-network:
@@ -1008,6 +1019,8 @@ services:
       # #329: SecurityService (CrowdSecWhitelistFileAdapter) writes the trusted-networks
       # allowlist here; crowdsec bind-mounts the same file read-only into its parsers stage.
       - ./crowdsec/whitelist:/crowdsec-whitelist
+      # The MQTT broker's logins: Vaier writes them, the broker's entrypoint copies them in.
+      - ./mosquitto/logins:/mosquitto-logins
     restart: unless-stopped
     # A hung JVM still counts as running, so restart: alone never notices it. While Vaier is unhealthy (or
     # still starting), Traefik drops its routers and the vaier-offline router answers instead. Docker does not
