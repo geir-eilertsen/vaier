@@ -396,6 +396,25 @@ services:
                 - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
         VAIER_EDGE_POLICY
         mv /traefik/config/.security.yml.tmp /traefik/config/security.yml
+        # Vaier's own broker, at mqtt.<domain> on 443 over TLS: phones use it off the tunnel, so it is
+        # published here rather than left for the operator.
+        cat > /traefik/config/.broker.yml.tmp <<'VAIER_BROKER'
+        tcp:
+          routers:
+            vaier-broker:
+              rule: HostSNI(`mqtt.{{ env "VAIER_DOMAIN" }}`)
+              entryPoints:
+                - websecure
+              service: vaier-broker
+              tls:
+                certResolver: letsencrypt
+          services:
+            vaier-broker:
+              loadBalancer:
+                servers:
+                  - address: mosquitto:1883
+        VAIER_BROKER
+        mv /traefik/config/.broker.yml.tmp /traefik/config/broker.yml
         # The session guard's plugin (vaier-session-guard above), local so it can touch the request only.
         # htransformation wrapped every response without Flush, which held back event streams (openHAB).
         sg=/plugins-local/src/github.com/vaier/sessionguard
@@ -693,8 +712,8 @@ services:
         ipv4_address: 172.20.0.53
 
   # The fleet's MQTT broker. No host port: peers reach it at the server's tunnel address, 10.13.13.1:1883,
-  # other stacks here as mosquitto:1883 on vaier-mqtt, and the internet only as a published stream on 443.
-  # Nobody can sign in until a login is added.
+  # other stacks here as mosquitto:1883 on vaier-mqtt, and the internet at mqtt.<domain>:443, the stream
+  # Traefik's entrypoint renders (broker.yml). Nobody can sign in until a login is added.
   mosquitto:
     image: eclipse-mosquitto:2.1.2-alpine
     logging: *container-log

@@ -189,7 +189,7 @@ Credentials stay on the server. If a machine's SSH key changes, Vaier refuses to
 
 ### Copy, paste and scroll inside a shell
 
-Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. In vim, htop or Claude Code, hold **Shift** while dragging to select. **Shift+PageUp / Shift+PageDown** always scrolls the terminal's own history.
+Ctrl/Cmd+C and Ctrl/Cmd+V work as usual. Dragging always selects text, even in vim, htop or Claude Code. The mouse wheel scrolls back through the output, or inside an app that scrolls itself, such as Claude Code; press **q** to leave the history and type again. **Shift+PageUp / Shift+PageDown** always scrolls the terminal's own history.
 
 ---
 
