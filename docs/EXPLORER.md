@@ -10,7 +10,7 @@ The Explorer, at `/explorer.html`, is one address space for the whole fleet. Eve
 
 Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`.
 
-- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
+- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **Devices**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
 - Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
 - **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk threshold and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
@@ -75,7 +75,7 @@ A healthy **machine card** says almost nothing: what the machine is and your des
 
 A machine Vaier hasn't read yet shows no disk mark. That is not a claim the disk has room.
 
-People, Security, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
+People, Security, Devices, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
 
 ![The fleet's Map: one marker per site, each joined to the Vaier server by its tunnel](vaier-map.png)
 
@@ -171,6 +171,11 @@ The **Topology** draws the fleet as a painted coast under the real sky. Hover an
 If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the-recovery-doors) and lift it. What gets mailed: [MONITORING](MONITORING.md#what-the-edge-blocks).
 
 ---
+
+
+## Devices
+
+**Devices**, in the **navigation bar**, lists everything Vaier has seen on your home networks and VPN, who is here now first. Tap a device for its connection history. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
 
 ## Web terminal
 

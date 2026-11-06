@@ -18,6 +18,7 @@
 | **VPN fleet** | Servers, LAN devices, phones and laptops join one WireGuard network; the Vaier app joins with a four-digit code. → [Networking](docs/NETWORKING.md) |
 | **Publishing** | Any container becomes an HTTPS site in one click, behind one wildcard DNS record you make once. → [Networking](docs/NETWORKING.md#publishing-a-service) |
 | **Sign-in & access** | Start with a first-run password, add Google or GitHub later, and choose who opens each service. → [Auth](docs/AUTH.md) |
+| **Devices** | Every device that joins your home networks or VPN, and each one's connection history. → [Networking](docs/NETWORKING.md#devices-on-your-networks) |
 | **Edge protection** | Traefik and CrowdSec turn scanners away, and Vaier says who and why. → [Networking](docs/NETWORKING.md#edge-hardening) |
 | **Explorer** | Files, containers, disks and backups across every machine in one place, opening on what needs you. → [Explorer](docs/EXPLORER.md) |
 | **Map & Topology** | Your sites and tunnels on a map, or as one picture. Nobody is tracked. → [Explorer](docs/EXPLORER.md#topology) |

@@ -116,6 +116,17 @@ A relay's network must be its own LAN: Vaier refuses one wider than a `/8`, one 
 
 For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCED.md).
 
+## Devices on your networks
+
+**Devices** (in the top bar) lists everything Vaier has seen on your networks — every phone, TV and gadget on a home network a relay reaches, and every peer on the VPN — whether Vaier manages it or not. Who is here now comes first; tap a device to see every time it was there, kept forever.
+
+Every five minutes each relay pings its own network and reads back who answered, so a device is seen even when it ignores pings. A device on a home network is known by its hardware address; one that is away for less than 15 minutes (a phone asleep on Wi-Fi) is still counted as here. A device Vaier manages shows under its machine's name.
+
+Caveats:
+- Only a relay Vaier can sign in to is asked, and only for a network no wider than a `/22`.
+- A phone set to a *rotating* private Wi-Fi address shows up as a new device each time. The default fixed private address is fine.
+- On some relays only root may ping; there, a device that has been quiet for a while may be missed until it talks.
+
 ---
 
 ## Publishing a service
