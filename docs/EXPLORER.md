@@ -12,7 +12,7 @@ Your Vaier's address takes an admin to the **Fleet** and everyone else to the **
 
 - The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **Devices**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
 - Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
-- **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk threshold and **Fleet credentials**. Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
+- **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk threshold and **Credentials** (fleet credentials and each house's Deco password). Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
 ---
 
@@ -61,7 +61,7 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 
 A door is greyed, with the reason on hover, when Vaier can't sign in or the machine isn't answering. If a read fails, the page says why in plain words, with **Change sign-in** when the machine turned Vaier's sign-in down. Turning on **Let Vaier sign in to this machine** asks for the sign-in straight away. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, and **Stop Vaier signing in here**, which asks first — it also stops backups, disk watching, updates and files there), addresses, **Edit details**, the machine's setup (**Update its setup** where Vaier can sign in to it, otherwise **Download its setup again**), and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
+Where Vaier has seen the machine on your networks, a closed **Connections** fold says, per network, whether it is there now or when it was last, and its latest stretches there; **Not this machine** sends a wrongly linked device back to Devices. Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, and **Stop Vaier signing in here**, which asks first — it also stops backups, disk watching, updates and files there), addresses, **Edit details**, the machine's setup (**Update its setup** where Vaier can sign in to it, otherwise **Download its setup again**), and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
@@ -175,7 +175,7 @@ If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the
 
 ## Devices
 
-**Devices**, in the **navigation bar**, lists everything Vaier has seen on your home networks and VPN, who is here now first. Tap a device for its connection history, to give it a name, or to say you know it; a device Vaier has never seen before wears **New** until you do. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
+**Devices**, in the **navigation bar**, lists what Vaier has seen on your home networks that is not one of your own machines, each house's guest Wi-Fi right under it, who is here now first. Tap a device for its connection history, to give it a name, to say you know it, to join it with another row under **Same device as…**, or to link it to one of your machines under **This is one of my machines…**; a device Vaier has never seen before wears **New** until you name it or know it. Under a house, one quiet line appears only when Vaier needs its Deco password — none saved, or the Deco refusing it — and leads to that house's row under [Credentials](#credentials). Your own machines' connections are on their pages, under **Connections**. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
 
 ## Web terminal
 
@@ -214,13 +214,17 @@ Every five minutes Vaier counts the updates an install would put on apt machines
 
 ## Credentials
 
-A **fleet credential** is one secret that must exist on every machine: a name, a path, a file mode and the secret. Open **Fleet credentials** from **Settings**.
+Open **Credentials** from **Settings**. It holds two kinds of secret.
+
+A **fleet credential** is one secret that must exist on every machine: a name, a path, a file mode and the secret.
 
 - A **coverage strip** shows one cell per machine that can hold it.
 - **Distribute** writes it everywhere and checks it arrived intact.
 - **Withdraw** removes it from the machines. **Delete** only makes Vaier forget it, so withdraw first.
 - Every five minutes Vaier re-writes it where it is missing or out of date.
 - Changing the path of a distributed credential first removes the file at the old path from every machine Vaier can reach.
+
+**Router passwords** has one row per house Vaier sweeps: the password of that house's Deco, so devices get the Deco's names and the guest Wi-Fi is watched. **Add the password** or **Change** to type it and **Save**; **Test** signs in to the Deco with the typed password — or the saved one — and says whether it works and how many devices the Deco lists, saving nothing; **Remove** forgets it after one confirm (names already learned stay). A row says why when the Deco stops answering to it.
 
 ### Claude sign-in
 

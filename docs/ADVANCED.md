@@ -83,7 +83,7 @@ chmod -R go-rwx vaier/ oauth2/ wireguard/ traefik/
 |------|----------|
 | `vaier/config/vault.key` | The key that unlocks every stored password and passphrase. Lose it and they are unreadable, unless a written survival kit gives it back; a copy of it together with the config folder exposes them all |
 | `vaier/config/vaier-config.yml` | Domain, SMTP settings **and the SMTP password** |
-| `vaier/config/host-credentials.yml` | How Vaier signs in to each machine: SSH passwords and keys |
+| `vaier/config/host-credentials.yml` | How Vaier signs in to each machine: SSH passwords and keys; and each house's Deco password |
 | `vaier/config/service-credentials.yml` | The sign-ins Vaier stores for published services |
 | `vaier/config/first-run-password` | The first-run sign-in's email and password |
 | `vaier/config/access.yml` | Access store — the known identities, their roles and access groups |

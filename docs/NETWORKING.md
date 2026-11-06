@@ -118,16 +118,24 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 
 ## Devices on your networks
 
-**Devices** (in the top bar) lists everything Vaier has seen on your networks — every phone, TV and gadget on a home network a relay reaches, and every peer on the VPN — whether Vaier manages it or not. Who is here now comes first; tap a device to see every time it was there, kept forever.
+**Devices** (in the top bar) lists everything Vaier has seen on your home networks that is not one of your own machines — every phone, TV and gadget a relay or the house's Deco can see, and everyone on the Deco's guest Wi-Fi, which gets its own section right under its house. Who is here now comes first; tap a device to see every time it was there, kept forever. Your own machines — VPN peers, LAN servers, anything the Vaier app vouches for — are not listed there: each one's connections are under **Connections** on its own page in the fleet.
 
-Every five minutes each relay pings its own network and reads back who answered, so a device is seen even when it ignores pings. A device on a home network is known by its hardware address; one that is away for less than 15 minutes (a phone asleep on Wi-Fi) is still counted as here. A device Vaier manages shows under its machine's name.
+Every five minutes each relay pings its own network and reads back who answered, so a device is seen even when it ignores pings; where the house's Deco password is saved, the Deco's own list of online devices counts too, which also catches a phone whose Wi-Fi was asleep during the ping. A device on a home network is known by its hardware address; one that is away for less than 15 minutes (a phone asleep on Wi-Fi) is still counted as here.
 
-When a device Vaier has never seen joins a home network, admins get one mail naming the house, its address and its hardware address, with a link to Devices; several in the same round share one mail. The device wears **New** until you name it or press **I know this device**. Vaier mails about each device once, ever — naming it changes only the mark. Everything already on a network the first time Vaier looks at it, and every VPN peer, counts as known and is never mailed about.
+**Names from the Deco, and the guest Wi-Fi.** Give Vaier the password you use in the Deco app under **Settings → Credentials → Router passwords**, on that house's row; **Test** checks it first — the typed one, or the saved one — and says how many devices the Deco lists, without saving anything. Under a house in Devices, one quiet line leads there when no password is saved, when the Deco refuses it, or when it has failed two looks in a row; a single missed look, or a **Test** of the saved password that works, shows nothing. Nothing shows while it works. From the next look, each device shows the name the Deco gives it, and the house's guest Wi-Fi appears as its own network: the guest Wi-Fi is kept apart from the house network, so only the Deco can see it, and Vaier watches it only while it has the password. **Remove** stops Vaier reading the Deco; names it already learned stay. Vaier signs in, reads the list and signs out again each time — if you are signed in to the Deco's web page yourself at that moment, it skips that look.
+
+**When a phone changes its address.** iPhones and Android phones use a private Wi-Fi address that can change. Vaier keeps it as one device when:
+- the Deco calls the new address by the same, personal name as exactly one device it already knows on that network (a name like *iPhone* or *Galaxy* alone is not enough), and that device is not on the network under its old address; or
+- the device runs the Vaier app, which tells Vaier its address on the network every time it connects or changes network.
+
+Anything else you can join by hand: open the device, pick it under **Same device as…**, and press **Join them**. The two become one device with both histories; this cannot be split again. A device that is one of your own machines — a phone not yet on the latest Vaier app, say — you link under **This is one of my machines…** and **Link it**: it leaves Devices and its history moves to that machine's **Connections**, where **Not this machine** sends it back. A device on the house network and on its guest Wi-Fi stays two devices.
+
+**A mail when a stranger joins.** When a device Vaier has never seen joins a home network or a guest Wi-Fi, admins get one mail naming the house and which of the two, its address and its hardware address, with a link to Devices; several in the same round share one mail. Vaier waits one look (five minutes) before mailing, so a phone that only changed its address is recognised instead. The device wears **New** until you name it or press **I know this device**. Vaier mails about each device once, ever — naming it changes only the mark. Everything already on a network the first time Vaier looks at it counts as known and is never mailed about; so does every VPN peer.
 
 Caveats:
-- Only a relay Vaier can sign in to is asked, and only for a network no wider than a `/22`.
-- A phone set to a *rotating* private Wi-Fi address shows up as a new device — and a new mail — each time. The default fixed private address is fine.
-- On some relays only root may ping; there, a device that has been quiet for a while may be missed until it talks.
+- Only a relay Vaier can sign in to is asked, and only for a network no wider than a `/22`. The guest Wi-Fi needs the Deco password.
+- A device with no personal name in the Deco and no Vaier app, that changes its address, shows up as a new device — and a new mail — and can only be joined by hand.
+- On some relays only root may ping; there, without the Deco password, a device that has been quiet for a while may be missed until it talks.
 
 ---
 
