@@ -122,9 +122,11 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 
 Every five minutes each relay pings its own network and reads back who answered, so a device is seen even when it ignores pings. A device on a home network is known by its hardware address; one that is away for less than 15 minutes (a phone asleep on Wi-Fi) is still counted as here. A device Vaier manages shows under its machine's name.
 
+When a device Vaier has never seen joins a home network, admins get one mail naming the house, its address and its hardware address, with a link to Devices; several in the same round share one mail. The device wears **New** until you name it or press **I know this device**. Vaier mails about each device once, ever — naming it changes only the mark. Everything already on a network the first time Vaier looks at it, and every VPN peer, counts as known and is never mailed about.
+
 Caveats:
 - Only a relay Vaier can sign in to is asked, and only for a network no wider than a `/22`.
-- A phone set to a *rotating* private Wi-Fi address shows up as a new device each time. The default fixed private address is fine.
+- A phone set to a *rotating* private Wi-Fi address shows up as a new device — and a new mail — each time. The default fixed private address is fine.
 - On some relays only root may ping; there, a device that has been quiet for a while may be missed until it talks.
 
 ---

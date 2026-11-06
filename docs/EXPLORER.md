@@ -175,7 +175,7 @@ If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the
 
 ## Devices
 
-**Devices**, in the **navigation bar**, lists everything Vaier has seen on your home networks and VPN, who is here now first. Tap a device for its connection history. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
+**Devices**, in the **navigation bar**, lists everything Vaier has seen on your home networks and VPN, who is here now first. Tap a device for its connection history, to give it a name, or to say you know it; a device Vaier has never seen before wears **New** until you do. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
 
 ## Web terminal
 
