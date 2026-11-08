@@ -30,7 +30,7 @@ The fleet has **at most one**. While it has none, every server and NAS in the **
 The server's `backup` entry has **Server details** and, under the fold *Provision, authorize or remove this backup server*: **Provision**, **Authorize a machine**, **Setup script**, **Edit coordinates**, **Remove designation**.
 
 - Where Vaier can't drive docker over SSH (a Synology NAS, say), it stages **setup.sh** on the host and hands you one command: `sudo bash <path>`. Where Vaier can sign in there, **Run it in ‹machine›'s shell** opens its shell with the command typed: press Enter, and **Send password** if sudo asks. If it can't reach the host, download setup.sh from the UI.
-- If the backup server goes quiet, Vaier emails every admin, and again when it recovers.
+- If the backup server goes quiet, Vaier tells every admin — on their phone, or by mail when no admin has the Vaier app — and again when it recovers.
 
 **Authorize a machine** trusts a machine's SSH key on the server. The key is confined to that machine's own repositories, so one compromised machine can't touch another's archives. It also pins the server's host key on the machine.
 

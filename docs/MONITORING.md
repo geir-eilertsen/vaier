@@ -21,9 +21,11 @@ Admins are mailed (Settings → *Mail*) when:
 - a first sign-in lands as a pending access request
 - the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
 
-Each alert is one mail when trouble starts and one when it ends. Vaier remembers what it has told you, so restarting or updating it never re-sends an alert you already had. When it cannot read something — a machine, CrowdSec, its own notes — it waits for the next round rather than guessing.
+**Up/down news goes to your phone instead.** A server-type machine going up or down, a backup server going quiet or coming back, a container in trouble or running again, and a [new device on your networks](NETWORKING.md#devices-on-your-networks) reach admins as a message in the Vaier app on Android, on each admin's own phone — the one they are the **Owner** of. They are mailed only when no admin has such a phone, or Vaier's MQTT broker would not take the message.
 
-Without SMTP, monitoring is silent. A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) sends no up/down or backup mail, and its nightly backup is skipped.
+Each alert is one message when trouble starts and one when it ends. Vaier remembers what it has told you, so restarting or updating it never re-sends an alert you already had. When it cannot read something — a machine, CrowdSec, its own notes — it waits for the next round rather than guessing.
+
+Without SMTP or an admin's phone, monitoring is silent. A machine [switched off on purpose](EXPLORER.md#switched-off-on-purpose) sends no up/down or backup alert, and its nightly backup is skipped.
 
 ### Setting up mail
 
@@ -80,7 +82,7 @@ Trouble must show on two consecutive scrapes, so an **Update** or a restart does
 
 **What you see.** The container list says **gone**, **unhealthy** or **restart-looping**, and the machine's pane gets a card under *What to do next* saying when it was last well. It has **no button**: Vaier cannot start or restart containers.
 
-**What you're mailed.** One mail when trouble starts (*webtrees is unhealthy on Home*), one when it is running well again; getting worse earns a new mail. A container you remove is forgotten without a mail; only one that stops, crashes or turns unhealthy is news. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
+**What you're told.** One message when trouble starts (*webtrees is unhealthy on Home*), one when it is running well again; getting worse earns a new one. A container you remove is forgotten without a word; only one that stops, crashes or turns unhealthy is news. If the machine rebooted after the container was last seen running, the mail says so. Times are in the server's own time zone.
 
 ---
 
