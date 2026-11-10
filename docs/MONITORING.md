@@ -21,7 +21,7 @@ Admins are told when:
 - a first sign-in lands as a pending access request
 - the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
 
-**They go to the Vaier app.** Each alert reaches admins on each phone and Windows PC they are the **Owner** of: a message in the app on Android, a notification on Windows, whether or not the device is on the VPN at the time. Set the owner when you approve the device, or on its page. An alert is mailed (Settings → *Mail*) only when no admin owns such a device, or Vaier's MQTT broker would not take the message. Marvin's errand reports and mails with a link to act on — a first sign-in's access request, a confirmation — stay mail.
+**They go to the Vaier app.** Each alert reaches admins on each phone and Windows PC they are the **Owner** of: a message in the app on Android, a notification on Windows, whether or not the device is on the VPN at the time. A PC shows only what arrives while it is on; the phone keeps the rest. Set the owner when you approve the device, or on its page. An alert is mailed (Settings → *Mail*) only when no admin owns such a device, or Vaier's MQTT broker would not take the message. Marvin's errand reports and mails with a link to act on — a first sign-in's access request, a confirmation — stay mail.
 
 Each alert is one message when trouble starts and one when it ends. Vaier remembers what it has told you, so restarting or updating it never re-sends an alert you already had. When it cannot read something — a machine, CrowdSec, its own notes — it waits for the next round rather than guessing.
 
