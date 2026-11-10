@@ -80,7 +80,7 @@ At most five devices wait at once, and at most two from one internet address. A 
 The private key never leaves the device, so there is nothing to save.
 
 - **Android:** add the **Vaier** tile to Quick Settings to connect without opening the app.
-- **Windows:** run `VaierSetup.exe` and choose **Install**. The tunnel keeps running with the window closed. If the window says **Vaier is not running**, use **Repair**. The app is not yet signed, so SmartScreen warns on first run.
+- **Windows:** run `VaierSetup.exe` and choose **Install**. The tunnel keeps running with the window closed. Give the PC an **Owner** and their [alerts](MONITORING.md) show as Windows notifications, on the VPN or off it; an older app needs updating first. If the window says **Vaier is not running**, use **Repair**. The app is not yet signed, so SmartScreen warns on first run.
 - **Leave Vaier** removes the device from the fleet. A device you remove from your end notices on its own within a few minutes.
 - To remove a device, don't do it from a browser on that device — that cuts the tunnel carrying Vaier's answer. Use **Leave Vaier** instead.
 

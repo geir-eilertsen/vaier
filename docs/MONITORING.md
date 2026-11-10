@@ -8,9 +8,9 @@ What Vaier watches, when it mails you, and what you can do about it. Outside the
 
 ---
 
-## Email notifications
+## Alerts
 
-Admins are mailed (Settings → *Mail*) when:
+Admins are told when:
 
 - a server-type machine goes up or down
 - a filesystem fills past its threshold
@@ -21,7 +21,7 @@ Admins are mailed (Settings → *Mail*) when:
 - a first sign-in lands as a pending access request
 - the [edge](NETWORKING.md#edge-hardening) blocks a **credential attack** or one of your **own networks**
 
-**Up/down news goes to your phone instead.** A server-type machine going up or down, a backup server going quiet or coming back, a container in trouble or running again, and a [new device on your networks](NETWORKING.md#devices-on-your-networks) reach admins as a message in the Vaier app on Android, on each admin's own phone — the one they are the **Owner** of. They are mailed only when no admin has such a phone, or Vaier's MQTT broker would not take the message.
+**They go to the Vaier app.** Each alert reaches admins on each phone and Windows PC they are the **Owner** of: a message in the app on Android, a notification on Windows, whether or not the device is on the VPN at the time. Set the owner when you approve the device, or on its page. An alert is mailed (Settings → *Mail*) only when no admin owns such a device, or Vaier's MQTT broker would not take the message. Marvin's errand reports and mails with a link to act on — a first sign-in's access request, a confirmation — stay mail.
 
 Each alert is one message when trouble starts and one when it ends. Vaier remembers what it has told you, so restarting or updating it never re-sends an alert you already had. When it cannot read something — a machine, CrowdSec, its own notes — it waits for the next round rather than guessing.
 

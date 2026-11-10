@@ -13,7 +13,7 @@ Open a machine's files in the **Explorer**, tick the folders you would want back
 - creates a repository for the machine on the backup server, with a generated passphrase;
 - prepares the machine on its first backup (trusts its key, installs the client);
 - runs every night;
-- emails the admins only when a run fails or came back with holes.
+- tells the admins only when a run fails or came back with holes.
 
 **Back up more** takes you back to the files. **Stop backing up** removes a path; when the last one goes, the machine's job goes too. Archives already made are kept, and its time rail still browses them. Deleting a backed-up folder in the Explorer stops backing it up too; restoring it from the time rail puts it back under backup with the settings it had, and the finished transfer says **Backed up again**. Vaier remembers this only until it restarts. A backed-up folder deleted some other way shows up under **Needs you** after the next run, with **Stop backing it up**.
 
@@ -59,7 +59,7 @@ Each machine has one job: repository, source paths, excludes, retention (`keepDa
 
 borg runs as the SSH user, so **files that user cannot read are skipped**. Container volumes are the usual victims.
 
-**You are asked only when it has cost you something.** Such a run settles **incomplete**, emails the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up as root**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
+**You are asked only when it has cost you something.** Such a run settles **incomplete**, tells the admins, and **Needs you** shows *‹machine›'s last backup is missing N files*, with **Back up as root**. One click installs the grant and turns the setting on; the row then offers **Back up now**, so the holes fill today rather than tonight. Where Vaier can't gain root, it hands you a `sudo bash <path>` command.
 
 To turn it back **off**, open the **Back up as root** fold on the `backup` entry and untick it. Turned off while its grant is still installing, it stays off.
 
@@ -76,7 +76,7 @@ Each **backup run** ends as success, warnings, **incomplete**, failed, or unknow
 - **Failed** — including a run that never started (no SSH access, no credential, no borg, its backup storage gone). Emails every admin once, and again when the job recovers. A machine that is merely off or asleep at backup time is mailed, and shown in **Needs you**, only once it has gone a day and a half without a good backup.
 - **Unknown** — the run ended without a result, usually because the machine restarted, or Vaier lost touch with the machine mid-run and still couldn't reach it 12 hours after it last saw the run going. One unknown night isn't mailed; a machine that has gone **a day and a half without a good backup** is mailed like a failure and shown in **Needs you**.
 
-Once a week, between nightly runs, Vaier has borg read each repository back on the backup server, for at most half an hour at a time; a large repository is covered over several weeks. It emails the admins only when a check finds damage, once. While a check runs, **Back up now** on that machine says so and asks you to try again later.
+Once a week, between nightly runs, Vaier has borg read each repository back on the backup server, for at most half an hour at a time; a large repository is covered over several weeks. It tells the admins only when a check finds damage, once. While a check runs, **Back up now** on that machine says so and asks you to try again later.
 
 A run that didn't end cleanly shows its **run diagnostics**: the lines borg reported, such as `Permission denied`.
 

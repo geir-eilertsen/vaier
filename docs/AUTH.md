@@ -102,4 +102,4 @@ Vaier checks each published service's own sign-in and the service pane says what
 
 ## Open services
 
-A service open to *Anyone* whose own sign-in reads as **none** is an **open service**: anyone who finds the name can use it. Vaier mails admins about each one **once**. In the service's pane, **Put Vaier's sign-in in front** puts it behind sign-in; **This is meant to be public** silences it.
+A service open to *Anyone* whose own sign-in reads as **none** is an **open service**: anyone who finds the name can use it. Vaier tells admins about each one **once**. In the service's pane, **Put Vaier's sign-in in front** puts it behind sign-in; **This is meant to be public** silences it.
