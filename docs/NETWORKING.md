@@ -55,7 +55,7 @@ With two or more relay peers, a machine on one site's LAN can reach a machine on
 ### Names, descriptions and status
 
 - **Edit details** sets a machine's name and **description**. Renaming breaks nothing, and names **do not have to be unique**.
-- A LAN server that moved to a new address gets it in **Edit details** → **Address**: its published services go with it. Vaier refuses an address another machine already holds.
+- A LAN server that moved to a new address gets it in **Edit details** → **Address**: its published services go with it. Vaier refuses an address another machine already holds. When Vaier sees the machine itself turn up at another address on its network, its page says so with **Move it there**, and the admins hear about it once.
 - An amber name means the machine is reachable but Vaier can't see its apps right now; its Apps pane keeps the ones it saw last. Red means unreachable.
 - **Removing a machine** also forgets its SSH login and host key and stops its backups. The archives already made stay on the backup server.
 - The **Map** shows one marker per site. Phones and laptops are never placed on it.
