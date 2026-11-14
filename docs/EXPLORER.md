@@ -10,7 +10,7 @@ The Explorer, at `/explorer.html`, is one address space for the whole fleet. Eve
 
 Your Vaier's address takes an admin to the **Fleet** and everyone else to the **Launchpad**, the page of tiles at `/launchpad.html`.
 
-- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **Devices**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
+- The **navigation bar** holds **Fleet**, **Launchpad**, **Chat** (while an Anthropic key is stored), **Security**, **People** and **Settings**, with the current one marked. It sits in the topbar, as icons only on a phone. Admins see it on the Launchpad too; nobody else does.
 - Your avatar, at the topbar's right end, holds **Concepts** (the in-app glossary) and **Sign out**.
 - **Settings** holds what you set up once: backup hour, survival kit, mail, Chat's key, default disk threshold and **Credentials** (fleet credentials and each house's Deco password). Each is one line with **Change**. Trouble is never shown here; it goes in **Needs you**.
 
@@ -36,7 +36,7 @@ The top of the **Fleet** answers "is anything wrong?". **Needs you** is one list
 
 A button about a setting, such as **Set up mail** or **Check mail**, opens Settings at that item, unfolded. **Update Vaier** asks once, then updates. A row goes the moment its problem clears. **When nothing needs you, the list shows nothing and takes no room.**
 
-Machines are **grouped by site**: the Vaier server's site first, then each house with a server peer, then phones and laptops under **Devices**. A machine never moves when trouble comes or goes; its card wears a short mark instead ("Backup failed"). A machine's own page opens on its own Needs you rows.
+Machines are **grouped by site**: the Vaier server and what it reaches directly first, under **Hub**, then each house with a server peer, then phones and laptops under **On the move**. Under a house's cards sit its [other devices](#devices); tap a house's name to fold the whole house away. When Needs you is about one of a house's machines, the house's name takes that row's colour, so a folded house still shows it. A machine never moves when trouble comes or goes; its card wears a short mark instead ("Backup failed"). A machine's own page opens on its own Needs you rows.
 
 ### Switched off on purpose
 
@@ -61,7 +61,7 @@ A machine's page shows its name (plus one line when it is not well), its Needs y
 
 A door is greyed, with the reason on hover, when Vaier can't sign in or the machine isn't answering. If a read fails, the page says why in plain words, with **Change sign-in** when the machine turned Vaier's sign-in down. Turning on **Let Vaier sign in to this machine** asks for the sign-in straight away. Below the doors come **What to do next** (nudges for this machine) and, when updates wait, a line such as "4 updates waiting · none urgent" with **Install OS updates**.
 
-Where Vaier has seen the machine on your networks, a closed **Connections** fold says, per network, whether it is there now or when it was last, and its latest stretches there; **Not this machine** sends a wrongly linked device back to Devices. Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, and **Stop Vaier signing in here**, which asks first — it also stops backups, disk watching, updates and files there), addresses, **Edit details**, the machine's setup (**Update its setup** where Vaier can sign in to it, otherwise **Download its setup again**), and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
+Where Vaier has seen the machine on your networks, a closed **Connections** fold says when it was last heard from and, per network, which device Vaier took for it there, whether it is there now or when it was last, and its latest stretches; **Wrong device** sends a wrongly linked device back among its house's other devices. Everything else sits in one closed fold, **Sign-in, details and removal**: who Vaier signs in as (**Change**, and **Stop Vaier signing in here**, which asks first — it also stops backups, disk watching, updates and files there), addresses, **Edit details**, the machine's setup (**Update its setup** where Vaier can sign in to it, otherwise **Download its setup again**), and last a red fold holding **Give it new keys** and **Remove machine**, each confirmed by typing the machine's name.
 
 ![The Explorer's fleet: every machine as a card](vaier-explorer.jpg)
 
@@ -75,7 +75,7 @@ A healthy **machine card** says almost nothing: what the machine is and your des
 
 A machine Vaier hasn't read yet shows no disk mark. That is not a claim the disk has room.
 
-People, Security, Devices, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
+People, Security, Chat and Settings live in the **navigation bar**, not in the fleet. See [Access management](AUTH.md#access-management) for People.
 
 ![The fleet's Map: one marker per site, each joined to the Vaier server by its tunnel](vaier-map.png)
 
@@ -175,7 +175,7 @@ If CrowdSec blocks *you*, sign in through the [recovery doors](NETWORKING.md#the
 
 ## Devices
 
-**Devices**, in the **navigation bar**, lists what Vaier has seen on your home networks that is not one of your own machines, each house's guest Wi-Fi right under it, who is here now first. Tap a device for its connection history, to give it a name, to say you know it, to join it with another row under **Same device as…**, or to link it to one of your machines under **This is one of my machines…**; a device Vaier has never seen before wears **New** until you name it or know it, and one that answers like a machine wears **Can join**, with **Add to the fleet** when opened, and **Have a look** opens a device's web page for admins only. On a wide screen a **Maker** column shows who made each device; any column header sorts. Under a house, one quiet line appears only when the house has a Deco and Vaier needs its password — none saved, or the Deco refusing it — and leads to that house's row under [Credentials](#credentials). Your own machines' connections are on their pages, under **Connections**. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
+Under each house on the Fleet, a folded line — *31 other devices · 12 here · 2 new* — opens onto what Vaier has seen there that is not one of your own machines, with the house's **Guest Wi-Fi** as a second line; who is here now comes first. Tap a device for its connection history, to give it a name, to say you know it, to join it with another row under **Same device as…**, or to link it to one of your machines under **This is one of my machines…**; a device Vaier has never seen before wears **New** until you name it or know it, and one that answers like a machine wears **Can join**, with **Add to the fleet** when opened, and **Have a look** opens a device's web page for admins only. On a wide screen a **Maker** column shows who made each device; any column header sorts. Inside the fold, one quiet line appears only when the house has a Deco and Vaier needs its password — none saved, or the Deco refusing it — and leads to that house's row under [Credentials](#credentials). Your own machines' connections are on their pages, under **Connections**. See [Devices on your networks](NETWORKING.md#devices-on-your-networks).
 
 ## Web terminal
 
