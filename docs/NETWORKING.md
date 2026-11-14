@@ -119,7 +119,7 @@ For LAN servers reached from non-peer machines, see [`docs/ADVANCED.md`](ADVANCE
 
 ## Devices on your networks
 
-**Devices** (in the top bar) lists everything Vaier has seen on your home networks and the VPN — every phone, TV and gadget a relay or the house's Deco can see, and everyone on the Deco's guest Wi-Fi, which gets its own section right under its house. Who is here now comes first; tap a device to see every time it was there, kept forever. Your own machines — VPN peers, LAN servers, anything the Vaier app vouches for — are listed too, marked **In Vaier**; opening one offers a button to its page in the fleet, where its connections are under **Connections**.
+**Devices** (in the top bar) lists everything Vaier has seen on your home networks and the VPN — every phone, TV and gadget a relay or the house's Deco can see, and everyone on the Deco's guest Wi-Fi, which gets its own section right under its house. Who is here now comes first; tap a device to see the last 20 times it was there, or a network's heading to fold it away. Your own machines — VPN peers, LAN servers, anything the Vaier app vouches for — are listed too, marked **In Vaier**; opening one offers a button to its page in the fleet, where its connections are under **Connections**.
 
 Every five minutes each relay pings its own network and reads back who answered, so a device is seen even when it ignores pings; where the house's Deco password is saved, the Deco's own list of online devices counts too, which also catches a phone whose Wi-Fi was asleep during the ping. A device on a home network is known by its hardware address; one that is away for less than 15 minutes (a phone asleep on Wi-Fi) is still counted as here.
 
