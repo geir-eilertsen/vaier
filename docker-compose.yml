@@ -754,6 +754,9 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/logins:/mosquitto-logins
+    # The broker logs to stdout; without this the image's /mosquitto/log becomes an unnamed volume outside Vaier's folder.
+    tmpfs:
+      - /mosquitto/log
     restart: unless-stopped
     networks:
       vaier-network:

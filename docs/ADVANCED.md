@@ -12,6 +12,8 @@ Configuration and workflows beyond the basic Quick Start. If you're just getting
 
 `install.sh` installs Vaier and updates it by hand. It runs only on x86-64 (amd64) machines. It always fetches the runtime files for one ref of the repository (pin it with `VAIER_REF`: a branch, tag or commit — a commit or a `v` tag also pins Vaier's image to that build, a branch follows `latest`), creates `.env` at mode `600` if there is none, and adds any auto-generated secret `.env` lacks. It never changes a value you set.
 
+**A fresh install goes into `/docker/vaier`**, the folder every app in the fleet lives under ([Explorer](EXPLORER.md)). At a terminal, run from a folder with no install in it, the installer creates `/docker` (owned `root:docker`, mode `2775`) if it is missing, then `/docker/vaier` owned by you, and works there. Set `VAIER_DIR` to install somewhere else. Run in a folder that already holds an install, it works in that folder. An older install in your home folder moves with **Tidy into /docker/vaier** on any of Vaier's own containers in the Explorer.
+
 **At a terminal, it finishes the job** — including `curl … | bash`:
 
 - **Asks three questions on a fresh install**: your **domain**, your **email** (Let's Encrypt's contact and the first-run sign-in account — see [AUTH](AUTH.md#the-first-run-password-before-you-have-registered-anything)), and your **time zone** for schedules. They go into `.env` as `VAIER_DOMAIN`, `ACME_EMAIL` and `VAIER_TZ`.

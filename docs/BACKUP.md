@@ -121,14 +121,14 @@ This works only if Vaier backed up its own folder (tick it in the Explorer like 
    ```bash
    export BORG_PASSPHRASE='the passphrase from the kit' BORG_RSH="ssh -i $PWD/vaier-recovery-key"
    sudo -E borg list 'the repository from the kit'
-   sudo -E borg extract 'the repository from the kit'::ARCHIVE home/<user>/vaier
-   sudo tar -czpf vaier.tgz home/<user>/vaier
+   sudo -E borg extract 'the repository from the kit'::ARCHIVE docker/vaier
+   sudo tar -czpf vaier.tgz docker/vaier
    ```
 4. **Start it on the new server.** Install Docker (`curl -fsSL https://get.docker.com | sudo sh`), copy `vaier.tgz` over, then:
    ```bash
-   sudo tar -xzpf vaier.tgz -C / && cd ~/vaier && docker compose pull && docker compose up -d
+   sudo tar -xzpf vaier.tgz -C / && cd /docker/vaier && docker compose pull && docker compose up -d
    ```
-   Keep the same user and path, or move the folder and keep its owners: Vaier's files must stay owned by uid 1000.
+   An install that never moved into `/docker` lives at `home/<user>/vaier`: use that path in steps 3 and 4. Keep the same user and path, or move the folder and keep its owners: Vaier's files must stay owned by uid 1000.
 5. **Give it the old public address** if you can. On a new one, change your `*.<domain>` record. Servers find the new address by themselves within a few minutes. Phones, laptops and any machine whose setup is out of date keep the address they first looked up: restart their tunnel, or power-cycle one you can't reach.
 
 The restored folder carries Vaier's own key. If `vaier/config/vault.key` is missing, put the kit's **config key** there (`0600`, owned by uid 1000), or set it as `VAIER_VAULT_KEY` in `.env` and run `docker compose up -d`; without it every stored password and passphrase stays unreadable.

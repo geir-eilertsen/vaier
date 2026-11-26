@@ -35,11 +35,10 @@ You need an x86-64 (amd64) Linux server with a public IP (any small VPS with 2 G
 **1. Run the installer** on the server — no git clone:
 
 ```bash
-mkdir -p vaier && cd vaier
 curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | bash
 ```
 
-It asks for your domain, email and time zone, and offers to install Docker.
+It installs into `/docker/vaier`, asks for your domain, email and time zone, and offers to install Docker.
 
 **2. Make one DNS record** if the installer asks for it: `*.yourdomain.com  A  <this server's IP>`. It covers every service you will ever publish.
 
@@ -49,7 +48,7 @@ Then add your machines from the **Explorer**. Installer details and running with
 
 ## Updating
 
-Run the same installer again in the `vaier` folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. To update by hand, re-run the installer, then `docker compose pull && docker compose up -d`. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
+Run the same installer again in Vaier's folder, or press **Settings → Update Vaier**, which rolls back if the new version doesn't come up. To update by hand, re-run the installer, then `docker compose pull && docker compose up -d`. → [Monitoring](docs/MONITORING.md#updating-vaier-itself)
 
 ## Removing Vaier
 

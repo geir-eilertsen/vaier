@@ -9,8 +9,11 @@
 # file) from the release tarball — history-free, so it's runtime stuff only — and scaffolds a .env.
 #
 # Usage:
-#   mkdir -p vaier && cd vaier
 #   curl -fsSL https://raw.githubusercontent.com/geir-eilertsen/vaier/main/install.sh | bash
+#
+# A fresh install at a terminal goes into /docker/vaier, the folder every app in the fleet lives under, creating
+# /docker (root:docker, mode 2775) if it is missing. Set VAIER_DIR to choose another folder. Run in a folder that
+# already holds an install, it works there — that is how a re-run and Vaier's own update find their install.
 #
 # Safe to re-run on an existing install, and that is also how you UPGRADE the stack: it refreshes the
 # compose file and the committed assets, leaves .env alone, and tops up any auto-generated secret the
@@ -60,6 +63,27 @@ command -v tar  >/dev/null 2>&1 || die "tar is required."
 # A person at a terminal. Under `curl | bash` stdin is the script itself, so answers come from /dev/tty.
 interactive=false
 if [ -z "${VAIER_NONINTERACTIVE:-}" ] && [ -t 1 ] && { : </dev/tty; } 2>/dev/null; then interactive=true; fi
+
+sudo=''; [ "$(id -u)" -eq 0 ] || sudo='sudo'
+INSTALL_DIR="${VAIER_DIR:-/docker/vaier}"
+if $interactive && [ ! -e docker-compose.yml ] && [ "$PWD" != "$INSTALL_DIR" ]; then
+  if [ ! -e "$INSTALL_DIR/docker-compose.yml" ]; then
+    say "Installing into $INSTALL_DIR."
+    elsewhere="Run the installer in the folder you want with VAIER_DIR=\$PWD."
+    group=$(id -gn)
+    if [ "$(dirname "$INSTALL_DIR")" = /docker ]; then
+      group=docker
+      if [ ! -d /docker ]; then
+        # --system, as Docker's own packages make it, so a later Docker install takes the group as it is.
+        getent group docker >/dev/null 2>&1 || $sudo groupadd --system docker \
+          || die "Could not create the docker group. $elsewhere"
+        $sudo install -d -o root -g docker -m 2775 /docker || die "Could not create /docker. $elsewhere"
+      fi
+    fi
+    $sudo install -d -o "$(id -un)" -g "$group" "$INSTALL_DIR" || die "Could not create $INSTALL_DIR. $elsewhere"
+  fi
+  cd "$INSTALL_DIR"
+fi
 
 # `configs: content:` in docker-compose.yml needs Compose 2.23; an older one fails with a schema error.
 COMPOSE_MIN=2.23.0
@@ -217,7 +241,6 @@ if grep -qE '^VAIER_OAUTH2_COOKIE_SECRET=.*[+/]' .env; then
 fi
 
 if $interactive; then
-  sudo=''; [ "$(id -u)" -eq 0 ] || sudo='sudo'
   domain=$(env_value VAIER_DOMAIN)
   fresh=false
   if [ -z "$domain" ] || [ "$domain" = yourdomain.com ]; then
@@ -333,7 +356,7 @@ if [ -n "$domain" ] && [ "$domain" != yourdomain.com ]; then
   cat <<EOF
 
 $(say "Done.")
-Next:
+Next, in $PWD:
 ${dns_step}  - Start the stack — ${ds}docker compose up -d && ${ds}docker compose up -d vaier-shell
   - Sign in         — ${ds}docker compose logs vaier   prints the first-run password at the bottom;
                        that first sign-in becomes the admin.
@@ -346,7 +369,7 @@ else
   cat <<EOF
 
 $(say "Done.")
-Next:
+Next, in $PWD:
   1. Edit .env       — set your domain and Let's Encrypt email; nothing else is required.
                        (every auto-generated secret is already filled in for you.)
   2. Point DNS       — one record, once:  *.<domain>  A  <this server's public IP>
