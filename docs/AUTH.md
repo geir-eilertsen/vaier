@@ -78,7 +78,7 @@ Either way, a published service never receives your Vaier sign-in: Vaier blanks 
 
 ## Per-service access rules
 
-For a service behind sign-in, open its entry in the **Explorer** and use the **Allowed groups** chip picker. Empty means only admins get in. With groups set, only users holding at least one of them (plus admins) get in. Path-scoped services sharing one subdomain share one rule.
+For a service behind sign-in, open its entry in the **Explorer** and use the **Allowed groups** chip picker. Empty means only admins get in. With groups set, only users holding at least one of them (plus admins) get in. Path-scoped services sharing one subdomain share one rule. Someone already let in but without the groups sees *This service isn't shared with you*. Only someone still waiting sees *not approved yet*.
 
 ## Service credentials
 
